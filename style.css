@@ -658,6 +658,7 @@ body.safe-zone {
 
 .card .path-a,
 .card .path-b {
+    stroke-width: 2.5;
     filter: drop-shadow(0 0 3px currentColor)
             drop-shadow(0 0 6px currentColor)
             drop-shadow(0 0 12px currentColor);
