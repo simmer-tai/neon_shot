@@ -153,17 +153,16 @@ export class Game {
                     }
                 });
 
-                // 他のカードが消え終わる頃（0.6秒後）に選ばれたカードも消す
+                // 400ms後、選ばれたカードも消す
                 setTimeout(() => {
-                    cardEl.classList.remove('selected');
                     cardEl.classList.add('exit');
-                }, 600);
+                }, 400);
 
                 // 全て消え終わったらビルド画面を開く
                 setTimeout(() => {
                     this.cardSelectionUI.classList.add('hidden');
                     this.openBuildUI();
-                }, 1200);
+                }, 1000);
             });
             this.cardCandidatesContainer.appendChild(cardEl);
         });
@@ -171,34 +170,54 @@ export class Game {
         this.cardSelectionUI.classList.remove('hidden');
     }
 
-    createCardElement(card, useColor = true) {
+    createCardElement(card, useColor = true, context = 'selection') {
         const div = document.createElement('div');
         div.className = 'card';
         
+        // コンテキストに応じたSVG設定
+        let viewBox = "0 0 200 300";
+        let pathA = "M0,0 H184 L200,16 V300";
+        let pathB = "M200,300 H16 L0,284 V0";
+        let pathAInner = "M6,6 H178 L194,22 V294";
+        let pathBInner = "M194,294 H22 L6,278 V6";
+
+        if (context === 'inventory') {
+            viewBox = "0 0 100 140";
+            pathA = "M1,1 H89 L99,11 V139";
+            pathB = "M99,139 H11 L1,129 V1";
+            pathAInner = "M7,7 H83 L93,17 V133";
+            pathBInner = "M93,133 H17 L7,123 V7";
+        } else if (context === 'slot') {
+            viewBox = "0 0 160 210";
+            pathA = "M1,1 H149 L159,11 V209";
+            pathB = "M159,209 H11 L1,199 V1";
+            pathAInner = "M7,7 H143 L153,17 V203";
+            pathBInner = "M153,203 H17 L7,193 V7";
+        }
+
         // アニメーション用の枠線SVG
         const svg = `
-            <svg class="card-border" viewBox="0 0 200 300">
-                <path class="path-a" d="M0,0 H184 L200,16 V300" />
-                <path class="path-b" d="M200,300 H16 L0,284 V0" />
-                <!-- 二重枠用の内側パス (6pxオフセット) -->
-                <path class="path-a-inner" d="M6,6 H178 L194,22 V294" />
-                <path class="path-b-inner" d="M194,294 H22 L6,278 V6" />
+            <svg class="card-border" viewBox="${viewBox}">
+                <path class="path-a" d="${pathA}" />
+                <path class="path-b" d="${pathB}" />
+                <path class="path-a-inner" d="${pathAInner}" />
+                <path class="path-b-inner" d="${pathBInner}" />
             </svg>
         `;
         
-        // 塗りつぶしエフェクト用
         const fill = '<div class="card-fill"></div>';
 
         if (useColor) {
             div.style.borderColor = card.color;
             div.style.boxShadow = `0 0 10px ${card.color}44`;
+            div.style.color = card.color;
         }
 
         div.innerHTML = `
             ${svg}
             ${fill}
             <div class="card-content">
-                <div class="card-name" ${useColor ? `style="color: ${card.color}"` : ''}>${card.name}</div>
+                <div class="card-name">${card.name}</div>
                 <div class="card-desc">${card.description}</div>
             </div>
         `;
@@ -211,13 +230,26 @@ export class Game {
     }
 
     refreshBuildUI() {
+        if (!this.inventoryTitle) this.inventoryTitle = document.getElementById('inventory-title');
+        
+        const totalCards = this.inventory.length + this.equippedSlots.filter(s => s).length;
+        this.inventoryTitle.textContent = `INVENTORY (${this.inventory.length}/${totalCards})`;
+
         // スロット更新
         this.slotContainer.innerHTML = '';
         this.equippedSlots.forEach((card, index) => {
             const slot = document.createElement('div');
             slot.className = 'slot';
             if (card) {
-                const cardEl = this.createCardElement(card);
+                const cardEl = this.createCardElement(card, false, 'slot');
+                cardEl.classList.add('pop-in');
+                
+                // オーバーレイ追加
+                const overlay = document.createElement('div');
+                overlay.className = 'card-overlay';
+                overlay.innerHTML = '<span class="overlay-text overlay-unequip">UNEQUIP</span>';
+                cardEl.appendChild(overlay);
+
                 cardEl.addEventListener('click', () => this.unequipCard(index));
                 slot.appendChild(cardEl);
             }
@@ -227,7 +259,15 @@ export class Game {
         // インベントリ更新
         this.inventoryContainer.innerHTML = '';
         this.inventory.forEach((card, index) => {
-            const cardEl = this.createCardElement(card);
+            const cardEl = this.createCardElement(card, false, 'inventory');
+            cardEl.classList.add('pop-in');
+
+            // オーバーレイ追加
+            const overlay = document.createElement('div');
+            overlay.className = 'card-overlay';
+            overlay.innerHTML = '<span class="overlay-text overlay-equip">EQUIP</span>';
+            cardEl.appendChild(overlay);
+
             cardEl.addEventListener('click', () => this.equipCard(index));
             this.inventoryContainer.appendChild(cardEl);
         });
@@ -252,10 +292,14 @@ export class Game {
     }
 
     closeBuildUI() {
-        this.buildUI.classList.add('hidden');
-        this.isBuildMode = false;
-        // ステータス反映
-        this.player.applyBuild(this.equippedSlots);
+        this.finishBuildBtn.classList.add('clicked');
+        setTimeout(() => {
+            this.buildUI.classList.add('hidden');
+            this.finishBuildBtn.classList.remove('clicked');
+            this.isBuildMode = false;
+            // ステータス反映
+            this.player.applyBuild(this.equippedSlots);
+        }, 200);
     }
 
     // --- メインループ ---

@@ -39,16 +39,23 @@
 
         <!-- ビルド画面 -->
         <div id="build-ui" class="hidden overlay-ui">
-            <h2>BUILD SLOTS</h2>
-            <div id="slot-container">
-                <div class="slot" data-index="0"></div>
-                <div class="slot" data-index="1"></div>
-                <div class="slot" data-index="2"></div>
-                <div class="slot" data-index="3"></div>
-            </div>
-            <h3>INVENTORY</h3>
-            <div id="inventory-container">
-                <!-- JSで動的に追加 -->
+            <h2 id="build-title">BUILD SLOTS</h2>
+            <div class="build-layout">
+                <div class="build-left">
+                    <div id="slot-container">
+                        <div class="slot" data-index="0"></div>
+                        <div class="slot" data-index="1"></div>
+                        <div class="slot" data-index="2"></div>
+                        <div class="slot" data-index="3"></div>
+                    </div>
+                </div>
+                <div class="vertical-divider"></div>
+                <div class="build-right">
+                    <h3 id="inventory-title">INVENTORY (0/0)</h3>
+                    <div id="inventory-container">
+                        <!-- JSで動的に追加 -->
+                    </div>
+                </div>
             </div>
             <button id="finish-build-btn">FINISH BUILD</button>
         </div>

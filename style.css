@@ -199,7 +199,7 @@ body.safe-zone {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(0, 0, 0, 0.92);
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -207,6 +207,19 @@ body.safe-zone {
     z-index: 500;
     color: #fff;
     pointer-events: auto;
+}
+
+#build-ui {
+    background-image: 
+        linear-gradient(rgba(0, 255, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 30px 30px;
+    animation: buildUIEntry 0.4s ease-out forwards;
+}
+
+@keyframes buildUIEntry {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 /* カード選択用UIの特別スタイル（オーバーレイなし） */
@@ -254,15 +267,14 @@ body.safe-zone {
     width: 100%;
     height: 100%;
     pointer-events: none;
-    filter: drop-shadow(0 0 5px #00ffff);
 }
 
 .path-a, .path-b {
     fill: none;
-    stroke: #00ffff;
+    stroke: currentColor;
     stroke-width: 2px;
-    stroke-dasharray: 500;
-    stroke-dashoffset: 500;
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
     animation: draw-path 0.3s ease-out forwards;
 }
 
@@ -270,13 +282,18 @@ body.safe-zone {
     to { stroke-dashoffset: 0; }
 }
 
+@keyframes erase-path {
+    from { stroke-dashoffset: 0; }
+    to { stroke-dashoffset: 1000; }
+}
+
 /* 二重枠用（ホバー時に出現） */
 .path-a-inner, .path-b-inner {
     fill: none;
-    stroke: #00ffff;
+    stroke: currentColor;
     stroke-width: 1px;
-    stroke-dasharray: 500;
-    stroke-dashoffset: 500;
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
     transition: stroke-dashoffset 0.2s ease-in-out;
     opacity: 0.7;
 }
@@ -305,6 +322,13 @@ body.safe-zone {
     50% { transform: scaleY(1); transform-origin: bottom; }
     51% { transform: scaleY(1); transform-origin: top; }
     100% { transform: scaleY(0); transform-origin: top; }
+}
+
+@keyframes fill-swipe-out {
+    0%   { transform: scaleY(0); transform-origin: top; }
+    50%  { transform: scaleY(1); transform-origin: top; }
+    51%  { transform: scaleY(1); transform-origin: bottom; }
+    100% { transform: scaleY(0); transform-origin: bottom; }
 }
 
 /* カードコンテンツ */
@@ -338,114 +362,250 @@ body.safe-zone {
 }
 
 .card.exit .path-a, .card.exit .path-b {
-    animation: draw-path 0.3s 0.3s ease-in reverse forwards;
+    animation: erase-path 0.3s ease-out forwards;
 }
 
 .card.exit .card-fill {
-    animation: fill-swipe 0.3s 0s ease-in-out reverse forwards;
+    animation: fill-swipe-out 0.3s ease-in-out forwards;
 }
 
 .card.exit .card-content {
-    animation: reveal-text 0.15s 0s ease-in reverse forwards;
-}
-
-/* ビルド画面（インベントリ等）でのカードスタイル（アニメーションなし） */
-#build-ui .card {
-    width: 160px;
-    height: 220px;
-    padding: 15px;
-    border: 2px solid #00ffff;
-    border-radius: 10px;
-    background: rgba(0, 255, 255, 0.05);
-    transition: transform 0.2s ease, background 0.2s ease;
-    clip-path: none;
-}
-
-#build-ui .card-border, #build-ui .card-fill {
-    display: none;
-}
-
-#build-ui .card-content {
-    opacity: 1;
-    transform: none;
     animation: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
 }
 
-.card .card-name {
-    font-size: 22px;
-    font-weight: bold;
-    line-height: 1.2;
+/* ビルド画面用スタイル */
+#build-ui h2 {
+    font-size: 28px;
+    letter-spacing: 6px;
+    color: #00ffff;
+    text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff;
+    margin-bottom: 30px;
 }
 
-.card .card-desc {
-    font-size: 13px;
-    opacity: 0.9;
-}
-
-/* ビルド画面用 */
-#slot-container {
+.build-layout {
     display: flex;
-    gap: 15px;
-    margin-bottom: 40px;
+    width: 90%;
+    max-width: 1000px;
+    height: 550px;
+    gap: 30px;
+    align-items: stretch;
+}
+
+.build-left {
+    flex: 0 0 60%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.build-right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.vertical-divider {
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, #00ffff33, transparent);
+    border-right: 1px solid #00ffff33;
+}
+
+#slot-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 20px;
+    justify-items: center;
 }
 
 .slot {
-    width: 100px;
-    height: 140px;
-    border: 2px dashed #444;
-    border-radius: 8px;
+    width: 160px;
+    height: 210px;
+    border: 2px dashed #00ffff44;
+    position: relative;
     display: flex;
     justify-content: center;
     align-items: center;
-    transition: border-color 0.2s;
-    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.slot:empty::after {
+    content: "EMPTY";
+    font-size: 14px;
+    color: #00ffff44;
+    letter-spacing: 2px;
 }
 
 .slot:hover {
     border-color: #00ffff;
+    box-shadow: 0 0 15px #00ffff44;
+    background: rgba(0, 255, 255, 0.05);
 }
 
-.slot .card {
-    width: 90%;
-    height: 90%;
-    font-size: 12px;
+#inventory-title {
+    font-size: 16px;
+    color: #00ffff;
+    margin-bottom: 15px;
+    letter-spacing: 2px;
 }
 
 #inventory-container {
-    width: 80%;
-    max-height: 200px;
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-    overflow-y: auto;
+    gap: 12px;
+    justify-content: flex-start;
+    align-content: flex-start;
+}
+
+/* ビルド画面内カード共通デザイン */
+#build-ui .card {
+    width: 100px;
+    height: 140px;
     padding: 10px;
-    border: 1px solid #333;
-    border-radius: 5px;
+    color: #00ffff;
+    border: none;
+    border-radius: 0;
+    background: linear-gradient(135deg, rgba(0, 255, 255, 0.05) 0%, transparent 100%);
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
     justify-content: center;
-    margin-bottom: 30px;
+    align-items: center;
+    text-align: center;
+    position: relative;
 }
 
-#inventory-container .card {
-    width: 80px;
-    height: 110px;
+#build-ui .card:hover {
+    filter: brightness(1.4);
+    transform: translateY(-4px);
+}
+
+#build-ui .card .card-name {
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+#build-ui .card .card-desc {
     font-size: 10px;
-    padding: 5px;
+    line-height: 1.2;
 }
 
+#build-ui .slot .card {
+    width: 100%;
+    height: 100%;
+    font-size: inherit;
+}
+
+/* 装備・解除アニメーション */
+.pop-in {
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes popIn {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+/* カードオーバーレイ */
+.card-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 5;
+    pointer-events: none;
+}
+
+.card:hover .card-overlay {
+    opacity: 1;
+}
+
+.overlay-text {
+    font-weight: bold;
+    font-size: 14px;
+    letter-spacing: 1px;
+}
+
+.overlay-equip { color: #00ffff; }
+.overlay-unequip { color: #ff0055; }
+
+/* FINISH BUILD ボタン */
 #finish-build-btn {
-    padding: 15px 40px;
-    background: transparent;
-    border: 2px solid #00ff00;
+    position: relative;
+    margin-top: 40px;
+    min-width: 300px;
+    padding: 15px 60px;
+    background: linear-gradient(90deg, transparent, rgba(0, 255, 0, 0.1), transparent);
+    border: 1px solid #00ff00;
+    border-radius: 0;
     color: #00ff00;
     font-size: 20px;
-    font-weight: bold;
+    letter-spacing: 4px;
     cursor: pointer;
-    border-radius: 5px;
-    box-shadow: 0 0 10px #00ff00;
-    transition: all 0.2s;
+    overflow: hidden;
+    transition: all 0.3s ease;
 }
+
+#finish-build-btn::before, #finish-build-btn::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 40px;
+    height: 1px;
+    background: #00ff00;
+}
+
+#finish-build-btn::before { left: 10px; }
+#finish-build-btn::after { right: 10px; }
 
 #finish-build-btn:hover {
     background: rgba(0, 255, 0, 0.2);
-    box-shadow: 0 0 20px #00ff00;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+}
+
+/* スキャンラインアニメーション */
+#finish-build-btn:hover::after {
+    content: "";
+    position: absolute;
+    top: -100%;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to bottom, transparent, rgba(0, 255, 0, 0.4), transparent);
+    animation: scanline 1.5s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes scanline {
+    0% { top: -100%; }
+    100% { top: 100%; }
+}
+
+#finish-build-btn.clicked {
+    animation: btnClick 0.2s ease forwards;
+}
+
+@keyframes btnClick {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.95); }
+    100% { transform: scale(0.95); opacity: 0; }
+}
+
+/* 形状に沿ったSVG枠線を表示するため、非表示設定を解除 */
+#build-ui .card-content {
+    opacity: 1;
+    transform: none;
+    animation: none;
+    width: 100%;
 }
