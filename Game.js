@@ -242,7 +242,6 @@ export class Game {
             slot.className = 'slot';
             if (card) {
                 const cardEl = this.createCardElement(card, false, 'slot');
-                cardEl.classList.add('pop-in');
                 
                 // オーバーレイ追加
                 const overlay = document.createElement('div');
@@ -260,7 +259,6 @@ export class Game {
         this.inventoryContainer.innerHTML = '';
         this.inventory.forEach((card, index) => {
             const cardEl = this.createCardElement(card, false, 'inventory');
-            cardEl.classList.add('pop-in');
 
             // オーバーレイ追加
             const overlay = document.createElement('div');

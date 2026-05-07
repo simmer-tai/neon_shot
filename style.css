@@ -484,6 +484,26 @@ body.safe-zone {
     transform: translateY(-4px);
 }
 
+#build-ui .card:hover .path-a-inner,
+#build-ui .card:hover .path-b-inner {
+    stroke-dashoffset: 0;
+}
+
+#build-ui .card .path-a,
+#build-ui .card .path-b {
+    animation: draw-path 0.3s ease-out forwards;
+}
+
+#build-ui .card .card-fill {
+    animation: fill-swipe 0.3s 0.3s ease-in-out forwards;
+}
+
+#build-ui .card .card-content {
+    animation: reveal-text 0.3s 0.45s ease-out forwards;
+    opacity: 0;
+    transform: translateY(10px);
+}
+
 #build-ui .card .card-name {
     font-size: 14px;
     margin-bottom: 5px;
@@ -500,15 +520,6 @@ body.safe-zone {
     font-size: inherit;
 }
 
-/* 装備・解除アニメーション */
-.pop-in {
-    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-}
-
-@keyframes popIn {
-    from { transform: scale(0.8); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-}
 
 /* カードオーバーレイ */
 .card-overlay {
@@ -602,10 +613,3 @@ body.safe-zone {
     100% { transform: scale(0.95); opacity: 0; }
 }
 
-/* 形状に沿ったSVG枠線を表示するため、非表示設定を解除 */
-#build-ui .card-content {
-    opacity: 1;
-    transform: none;
-    animation: none;
-    width: 100%;
-}
