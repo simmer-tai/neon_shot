@@ -257,6 +257,8 @@ body.safe-zone {
     overflow: hidden;
     /* 内容を枠線に合わせて切り抜く */
     clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+    will-change: transform, filter, box-shadow;
+    transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.1s ease;
 }
 
 /* SVG枠線 */
@@ -470,7 +472,7 @@ body.safe-zone {
     background: linear-gradient(135deg, rgba(0, 255, 255, 0.05) 0%, transparent 100%);
     box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
     clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
-    transition: all 0.2s ease;
+    transition: all 0.1s ease;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -533,7 +535,7 @@ body.safe-zone {
     justify-content: center;
     align-items: center;
     opacity: 0;
-    transition: opacity 0.2s ease;
+    transition: opacity 0.08s ease;
     z-index: 5;
     pointer-events: none;
 }
@@ -662,6 +664,7 @@ body.safe-zone {
     filter: drop-shadow(0 0 3px currentColor)
             drop-shadow(0 0 6px currentColor)
             drop-shadow(0 0 12px currentColor);
+    transition: filter 0.1s ease;
 }
 
 .card .path-a-inner,
@@ -669,6 +672,7 @@ body.safe-zone {
     filter: drop-shadow(0 0 2px currentColor)
             drop-shadow(0 0 5px currentColor);
     opacity: 0.6;
+    transition: filter 0.1s ease, opacity 0.1s ease, stroke-dashoffset 0.1s ease-in-out;
 }
 
 /* ホバー時はさらに強くグロー */
