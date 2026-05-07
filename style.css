@@ -618,3 +618,71 @@ body.safe-zone {
     background-color: #ffff00;
 }
 
+/* --- カード フォントサイズ強化 --- */
+
+/* 選択画面の大カード */
+#card-candidates .card .card-name {
+    font-size: 22px;
+    letter-spacing: 3px;
+    font-weight: bold;
+}
+
+#card-candidates .card .card-desc {
+    font-size: 15px;
+    line-height: 1.6;
+}
+
+/* ビルド画面 インベントリカード */
+#inventory-container .card .card-name {
+    font-size: 13px;
+    letter-spacing: 1px;
+}
+
+#inventory-container .card .card-desc {
+    font-size: 10px;
+    line-height: 1.3;
+}
+
+/* ビルド画面 スロットカード */
+#slot-container .card .card-name {
+    font-size: 15px;
+    letter-spacing: 1px;
+}
+
+#slot-container .card .card-desc {
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+/* --- SVGパス ネオングロー効果 --- */
+
+.card .path-a,
+.card .path-b {
+    filter: drop-shadow(0 0 3px currentColor)
+            drop-shadow(0 0 6px currentColor)
+            drop-shadow(0 0 12px currentColor);
+}
+
+.card .path-a-inner,
+.card .path-b-inner {
+    filter: drop-shadow(0 0 2px currentColor)
+            drop-shadow(0 0 5px currentColor);
+    opacity: 0.6;
+}
+
+/* ホバー時はさらに強くグロー */
+.card:hover .path-a,
+.card:hover .path-b {
+    filter: drop-shadow(0 0 4px currentColor)
+            drop-shadow(0 0 10px currentColor)
+            drop-shadow(0 0 20px currentColor)
+            drop-shadow(0 0 30px currentColor);
+}
+
+.card:hover .path-a-inner,
+.card:hover .path-b-inner {
+    filter: drop-shadow(0 0 3px currentColor)
+            drop-shadow(0 0 8px currentColor);
+    opacity: 0.9;
+}
+
