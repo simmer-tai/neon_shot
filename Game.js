@@ -93,7 +93,7 @@ export class Game {
         this.lastFireTime = now;
 
         const angle = Math.atan2(ty - this.player.y, tx - this.player.x);
-        
+
         // 通常射撃
         this.bullets.push(new Bullet(this.player.x, this.player.y, angle, this.container, this.player.bulletSpeed));
 
@@ -141,10 +141,10 @@ export class Game {
             cardEl.addEventListener('click', () => {
                 // 選択アニメーション開始
                 this.inventory.push(card);
-                
+
                 // 選ばれたカードを拡大
                 cardEl.classList.add('selected');
-                
+
                 // 他のカードを逆再生で消す
                 candidates.forEach((_, i) => {
                     const otherCardEl = this.cardCandidatesContainer.children[i];
@@ -173,7 +173,7 @@ export class Game {
     createCardElement(card, useColor = true, context = 'selection') {
         const div = document.createElement('div');
         div.className = 'card';
-        
+
         // コンテキストに応じたSVG設定
         let viewBox = "0 0 200 300";
         let pathA = "M0,0 H184 L200,16 V300";
@@ -204,7 +204,7 @@ export class Game {
                 <path class="path-b-inner" d="${pathBInner}" />
             </svg>
         `;
-        
+
         const fill = '<div class="card-fill"></div>';
 
         if (useColor) {
@@ -231,7 +231,7 @@ export class Game {
 
     refreshBuildUI() {
         if (!this.inventoryTitle) this.inventoryTitle = document.getElementById('inventory-title');
-        
+
         const totalCards = this.inventory.length + this.equippedSlots.filter(s => s).length;
         this.inventoryTitle.textContent = `INVENTORY (${this.inventory.length}/${totalCards})`;
 
@@ -242,7 +242,7 @@ export class Game {
             slot.className = 'slot';
             if (card) {
                 const cardEl = this.createCardElement(card, false, 'slot');
-                
+
                 // オーバーレイ追加
                 const overlay = document.createElement('div');
                 overlay.className = 'card-overlay';
@@ -406,13 +406,13 @@ export class Game {
     restart() {
         // 全状態リセット
         this.player.reset(this.bounds);
-        
+
         // 残っている弾と敵を消去
         this.bullets.forEach(b => b.destroy());
         this.enemies.forEach(e => e.destroy());
         this.bullets = [];
         this.enemies = [];
-        
+
         this.killCount = 0;
         this.startTime = Date.now();
         this.survivalTime = 0;
@@ -428,10 +428,10 @@ export class Game {
         this.cardSelectionUI.classList.add('hidden');
         this.buildUI.classList.add('hidden');
         this.player.applyBuild(this.equippedSlots);
-        
+
         document.body.classList.remove('safe-zone');
         this.gameOverUI.classList.add('hidden');
-        
+
         // 再描画ループの再開
         requestAnimationFrame(() => this.update());
     }

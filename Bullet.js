@@ -7,7 +7,7 @@ export class Bullet {
         this.vy = Math.sin(angle) * this.speed;
         this.angle = angle;
         this.container = container;
-        
+
         this.element = document.createElement('div');
         this.element.className = 'bullet';
         this.container.appendChild(this.element);
