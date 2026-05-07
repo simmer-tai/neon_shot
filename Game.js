@@ -302,9 +302,11 @@ export class Game {
         const fill = '<div class="card-fill"></div>';
 
         if (useColor) {
-            div.style.borderColor = card.color;
-            div.style.boxShadow = `0 0 10px ${card.color}44`;
-            div.style.color = card.color;
+            div.classList.add('main-card');
+            const displayColor = '#ffff00';
+            div.style.borderColor = displayColor;
+            div.style.boxShadow = `0 0 10px ${displayColor}44`;
+            div.style.color = displayColor;
         }
 
         div.innerHTML = `

@@ -43,7 +43,7 @@ export const MAIN_CARDS = {
         id: 'shotgun',
         name: 'SHOTGUN',
         description: '5発を扇状に同時発射\n弾速低下・連射低下',
-        color: '#ff44ff',
+        color: '#ffff00',
         type: 'main'
     },
     sniper: {
@@ -57,7 +57,7 @@ export const MAIN_CARDS = {
         id: 'homing',
         name: 'HOMING',
         description: '最も近い敵へ追尾する弾\nやや連射が低下',
-        color: '#00ff88',
+        color: '#ffff00',
         type: 'main'
     }
 };

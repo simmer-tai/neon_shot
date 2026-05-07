@@ -613,3 +613,8 @@ body.safe-zone {
     100% { transform: scale(0.95); opacity: 0; }
 }
 
+/* メインカード選択時の塗りアニメーション色 */
+.card.main-card .card-fill {
+    background-color: #ffff00;
+}
+
