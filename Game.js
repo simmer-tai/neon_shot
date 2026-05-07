@@ -1,7 +1,7 @@
 import { Player } from './Player.js';
 import { Bullet } from './Bullet.js';
 import { Enemy } from './Enemy.js';
-import { CardSystem, CARDS } from './CardSystem.js';
+import { CardSystem, CARDS, MAIN_CARDS } from './CardSystem.js';
 
 export class Game {
     constructor() {
@@ -43,7 +43,9 @@ export class Game {
         // カード管理
         this.inventory = [];
         this.equippedSlots = [null, null, null, null];
+        this.equippedMainCard = null;
         this.isBuildMode = false;
+        this.isMouseDown = false;
 
         // 難易度パラメータ
         this.baseSpawnInterval = 1000;
@@ -72,11 +74,15 @@ export class Game {
             this.bounds.height = window.innerHeight;
         });
         window.addEventListener('mousedown', (e) => {
+            this.isMouseDown = true;
             if (this.isGameOver) {
                 this.restart();
             } else if (!this.isBuildMode && this.phase === 'BATTLE') {
                 this.shoot(e.clientX, e.clientY);
             }
+        });
+        window.addEventListener('mouseup', () => {
+            this.isMouseDown = false;
         });
 
         this.finishBuildBtn.addEventListener('click', () => {
@@ -88,19 +94,51 @@ export class Game {
     }
 
     shoot(tx, ty) {
-        const now = Date.now();
-        if (now - this.lastFireTime < this.player.fireRate) return;
-        this.lastFireTime = now;
+        const x = this.player.x;
+        const y = this.player.y;
+        const angle = Math.atan2(ty - y, tx - x);
 
-        const angle = Math.atan2(ty - this.player.y, tx - this.player.x);
+        if (this.equippedMainCard === null) {
+            // 通常射撃
+            const now = Date.now();
+            if (now - this.lastFireTime < this.player.fireRate) return;
+            this.lastFireTime = now;
 
-        // 通常射撃
-        this.bullets.push(new Bullet(this.player.x, this.player.y, angle, this.container, this.player.bulletSpeed));
+            this.bullets.push(new Bullet(x, y, angle, this.container, this.player.bulletSpeed));
 
-        // マルチショット判定
-        if (Math.random() < this.player.multiShotChance) {
-            const spread = 0.2; // 角度の広がり
-            this.bullets.push(new Bullet(this.player.x, this.player.y, angle + spread, this.container, this.player.bulletSpeed));
+            // マルチショット判定
+            if (Math.random() < this.player.multiShotChance) {
+                const spread = 0.2;
+                this.bullets.push(new Bullet(x, y, angle + spread, this.container, this.player.bulletSpeed));
+            }
+        } else if (this.equippedMainCard.id === 'shotgun') {
+            // ショットガン: 5発扇状
+            const now = Date.now();
+            if (now - this.lastFireTime < this.player.fireRate * 2) return;
+            this.lastFireTime = now;
+
+            const spread = Math.PI / 9; // 20度ずつ（-40度〜+40度）
+            for (let i = -2; i <= 2; i++) {
+                const bulletAngle = angle + (i * spread);
+                const speed = this.player.bulletSpeed * 0.7;
+                this.bullets.push(new Bullet(x, y, bulletAngle, this.container, speed));
+            }
+        } else if (this.equippedMainCard.id === 'sniper') {
+            // スナイパー: 貫通弾
+            const now = Date.now();
+            if (now - this.lastFireTime < this.player.fireRate * 4) return;
+            this.lastFireTime = now;
+
+            const speed = this.player.bulletSpeed * 3;
+            this.bullets.push(new Bullet(x, y, angle, this.container, speed, { isPiercing: true }));
+        } else if (this.equippedMainCard.id === 'homing') {
+            // ホーミング: 追尾弾
+            const now = Date.now();
+            if (now - this.lastFireTime < this.player.fireRate * 1.5) return;
+            this.lastFireTime = now;
+
+            const speed = this.player.bulletSpeed * 1.2;
+            this.bullets.push(new Bullet(x, y, angle, this.container, speed, { isHoming: true }));
         }
     }
 
@@ -132,12 +170,68 @@ export class Game {
     // --- カードシステム関連 ---
 
     showCardSelection() {
+        // メインカード未選択の場合、メインカード選択フェーズを実行
+        if (this.equippedMainCard === null) {
+            this.showMainCardSelection();
+        } else {
+            // メインカード既選択の場合、サブカード選択のみ
+            this.showSubCardSelection();
+        }
+    }
+
+    showMainCardSelection() {
+        this.isBuildMode = true;
+        this.cardCandidatesContainer.innerHTML = '';
+
+        // h2要素を "CHOOSE YOUR PLAYSTYLE" に変更
+        const h2 = document.querySelector('h2');
+        if (h2) h2.textContent = 'CHOOSE YOUR PLAYSTYLE';
+
+        const candidates = CardSystem.getMainCardCandidates();
+
+        candidates.forEach((card) => {
+            const cardEl = this.createCardElement(card, true);
+            cardEl.addEventListener('click', () => {
+                // メインカード選択
+                this.equippedMainCard = card;
+
+                // 選ばれたカードを拡大
+                cardEl.classList.add('selected');
+
+                // 他のカードを逆再生で消す
+                candidates.forEach((_, i) => {
+                    const otherCardEl = this.cardCandidatesContainer.children[i];
+                    if (otherCardEl !== cardEl) {
+                        otherCardEl.classList.add('exit');
+                    }
+                });
+
+                // 400ms後、選ばれたカードも消す
+                setTimeout(() => {
+                    cardEl.classList.add('exit');
+                }, 400);
+
+                // 全て消え終わったらサブカード選択へ
+                setTimeout(() => {
+                    this.cardCandidatesContainer.innerHTML = '';
+                    const h2 = document.querySelector('h2');
+                    if (h2) h2.textContent = 'CHOOSE A CARD';
+                    this.showSubCardSelection();
+                }, 1000);
+            });
+            this.cardCandidatesContainer.appendChild(cardEl);
+        });
+
+        this.cardSelectionUI.classList.remove('hidden');
+    }
+
+    showSubCardSelection() {
         this.isBuildMode = true;
         this.cardCandidatesContainer.innerHTML = '';
         const candidates = CardSystem.getRandomCandidates(4);
 
         candidates.forEach((card, index) => {
-            const cardEl = this.createCardElement(card, false); // 選択画面では水色統一
+            const cardEl = this.createCardElement(card, false);
             cardEl.addEventListener('click', () => {
                 // 選択アニメーション開始
                 this.inventory.push(card);
@@ -337,7 +431,7 @@ export class Game {
         // 弾の更新
         for (let i = this.bullets.length - 1; i >= 0; i--) {
             const b = this.bullets[i];
-            b.update();
+            b.update(this.enemies);
             if (b.isOffScreen(this.bounds)) {
                 b.destroy();
                 this.bullets.splice(i, 1);
@@ -360,8 +454,10 @@ export class Game {
                 if (distSq < hitRadius * hitRadius) {
                     e.destroy();
                     this.enemies.splice(i, 1);
-                    b.destroy();
-                    this.bullets.splice(j, 1);
+                    if (!b.isPiercing) {
+                        b.destroy();
+                        this.bullets.splice(j, 1);
+                    }
                     this.killCount++;
                     hit = true;
                     break;
@@ -424,6 +520,7 @@ export class Game {
         // カード初期化
         this.inventory = [];
         this.equippedSlots = [null, null, null, null];
+        this.equippedMainCard = null;
         this.isBuildMode = false;
         this.cardSelectionUI.classList.add('hidden');
         this.buildUI.classList.add('hidden');
