@@ -9,6 +9,49 @@
 <body>
     <div id="game-container">
         <div id="player" class="neon-sphere"></div>
+        
+        <!-- UIレイヤー -->
+        <div id="ui-layer">
+            <div id="hp-ui">HP: 3</div>
+            <div id="phase-ui">
+                <div id="phase-name">BATTLE PHASE</div>
+                <div id="phase-timer">60s</div>
+            </div>
+        </div>
+
+        <!-- 演出用レイヤー -->
+        <div id="flash-overlay"></div>
+
+        <!-- ゲームオーバー画面 -->
+        <div id="game-over-ui" class="hidden">
+            <h1>GAME OVER</h1>
+            <div id="final-stats">Survival: 0s | Kills: 0</div>
+            <div class="restart-hint">CLICK TO RESTART</div>
+        </div>
+
+        <!-- カード選択UI -->
+        <div id="card-selection-ui" class="hidden overlay-ui">
+            <h2>CHOOSE A CARD</h2>
+            <div id="card-candidates">
+                <!-- JSで動的に追加 -->
+            </div>
+        </div>
+
+        <!-- ビルド画面 -->
+        <div id="build-ui" class="hidden overlay-ui">
+            <h2>BUILD SLOTS</h2>
+            <div id="slot-container">
+                <div class="slot" data-index="0"></div>
+                <div class="slot" data-index="1"></div>
+                <div class="slot" data-index="2"></div>
+                <div class="slot" data-index="3"></div>
+            </div>
+            <h3>INVENTORY</h3>
+            <div id="inventory-container">
+                <!-- JSで動的に追加 -->
+            </div>
+            <button id="finish-build-btn">FINISH BUILD</button>
+        </div>
     </div>
     <script type="module" src="script.js"></script>
 </body>

@@ -1,8 +1,8 @@
 export class Bullet {
-    constructor(x, y, angle, container) {
+    constructor(x, y, angle, container, speed = 15) {
         this.x = x;
         this.y = y;
-        this.speed = 15;
+        this.speed = speed;
         this.vx = Math.cos(angle) * this.speed;
         this.vy = Math.sin(angle) * this.speed;
         this.angle = angle;
