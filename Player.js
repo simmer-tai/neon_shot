@@ -55,7 +55,9 @@ export class Player {
         this.multiShotChance = multiShotMod; // 確率はそのまま加算
     }
 
-    update(keys, bounds) {
+    update(keys, bounds, deltaTime) {
+        const dt = deltaTime / 16.67; // 60fps基準での係数
+
         let ax = 0;
         let ay = 0;
 
@@ -70,10 +72,10 @@ export class Player {
             ay /= length;
         }
 
-        this.vx += ax * this.acceleration;
-        this.vy += ay * this.acceleration;
-        this.vx *= this.friction;
-        this.vy *= this.friction;
+        this.vx += ax * this.acceleration * dt;
+        this.vy += ay * this.acceleration * dt;
+        this.vx *= Math.pow(this.friction, dt);
+        this.vy *= Math.pow(this.friction, dt);
 
         const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
         if (speed > this.maxSpeed) {
@@ -81,8 +83,8 @@ export class Player {
             this.vy = (this.vy / speed) * this.maxSpeed;
         }
 
-        this.x += this.vx;
-        this.y += this.vy;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
 
         if (this.x < this.radius) { this.x = this.radius; this.vx = 0; }
         else if (this.x > bounds.width - this.radius) { this.x = bounds.width - this.radius; this.vx = 0; }
@@ -91,7 +93,7 @@ export class Player {
 
         // 無敵時間の更新
         if (this.isInvincible) {
-            this.invincibleTimer -= 16.67; // 概算のフレーム時間
+            this.invincibleTimer -= deltaTime;
             if (this.invincibleTimer <= 0) {
                 this.isInvincible = false;
                 this.element.classList.remove('invincible');

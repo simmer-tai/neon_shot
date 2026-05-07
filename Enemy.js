@@ -16,13 +16,14 @@ export class Enemy {
         this.container.appendChild(this.element);
     }
 
-    update(player) {
+    update(player, deltaTime = 16.67) {
+        const dt = deltaTime / 16.67; // 60fps基準での係数
         const dx = player.x - this.x;
         const dy = player.y - this.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist > 0) {
-            this.x += (dx / dist) * this.speed;
-            this.y += (dy / dist) * this.speed;
+            this.x += (dx / dist) * this.speed * dt;
+            this.y += (dy / dist) * this.speed * dt;
         }
     }
 

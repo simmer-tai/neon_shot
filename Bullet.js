@@ -17,7 +17,9 @@ export class Bullet {
         this.container.appendChild(this.element);
     }
 
-    update(enemies = []) {
+    update(enemies = [], deltaTime = 16.67) {
+        const dt = deltaTime / 16.67; // 60fps基準での係数
+
         // ホーミング処理
         if (this.isHoming && enemies.length > 0) {
             // 最近傍の敵を探す
@@ -44,7 +46,7 @@ export class Bullet {
                 while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
 
                 // 旋回量制限（0.08rad/frame）
-                const steeringForce = 0.08;
+                const steeringForce = 0.08 * dt;
                 const turnAmount = Math.max(-steeringForce, Math.min(steeringForce, angleDiff));
 
                 // 新しい角度を計算
@@ -55,8 +57,8 @@ export class Bullet {
             }
         }
 
-        this.x += this.vx;
-        this.y += this.vy;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
     }
 
     isOffScreen(bounds) {

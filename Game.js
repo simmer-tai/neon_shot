@@ -51,6 +51,9 @@ export class Game {
         this.baseSpawnInterval = 1000;
         this.baseEnemySpeed = 2;
 
+        // フレームレート独立化
+        this.lastTimestamp = null;
+
         this.init();
     }
 
@@ -90,7 +93,7 @@ export class Game {
         });
 
         // ループ開始
-        this.update();
+        requestAnimationFrame((ts) => this.update(ts));
     }
 
     shoot(tx, ty) {
@@ -398,15 +401,19 @@ export class Game {
 
     // --- メインループ ---
 
-    update() {
+    update(timestamp = 0) {
         if (this.isGameOver) return;
         if (this.isBuildMode) {
             // ビルド中はゲーム内更新を停止するが、アニメーションループは維持
-            requestAnimationFrame(() => this.update());
+            requestAnimationFrame((ts) => this.update(ts));
             return;
         }
 
-        const deltaTime = 16.67; // 約60fps想定
+        if (this.lastTimestamp === null) this.lastTimestamp = timestamp;
+        const rawDelta = timestamp - this.lastTimestamp;
+        this.lastTimestamp = timestamp;
+        // 最大値を100msにクランプ（タブ非アクティブ時の爆発防止）
+        const deltaTime = Math.min(rawDelta, 100);
         this.survivalTime = Math.floor((Date.now() - this.startTime) / 1000);
 
         // フェーズタイマーの更新
@@ -416,7 +423,7 @@ export class Game {
         }
 
         // プレイヤー更新
-        this.player.update(this.keys, this.bounds);
+        this.player.update(this.keys, this.bounds, deltaTime);
 
         // 敵の生成 (戦闘フェーズのみ)
         if (this.phase === 'BATTLE') {
@@ -433,7 +440,7 @@ export class Game {
         // 弾の更新
         for (let i = this.bullets.length - 1; i >= 0; i--) {
             const b = this.bullets[i];
-            b.update(this.enemies);
+            b.update(this.enemies, deltaTime);
             if (b.isOffScreen(this.bounds)) {
                 b.destroy();
                 this.bullets.splice(i, 1);
@@ -443,7 +450,7 @@ export class Game {
         // 敵の更新と衝突判定
         for (let i = this.enemies.length - 1; i >= 0; i--) {
             const e = this.enemies[i];
-            e.update(this.player);
+            e.update(this.player, deltaTime);
 
             let hit = false;
             // 弾 vs 敵
@@ -486,7 +493,7 @@ export class Game {
 
         this.updateUI();
         this.draw();
-        requestAnimationFrame(() => this.update());
+        requestAnimationFrame((ts) => this.update(ts));
     }
 
     updateUI() {
@@ -532,7 +539,8 @@ export class Game {
         this.gameOverUI.classList.add('hidden');
 
         // 再描画ループの再開
-        requestAnimationFrame(() => this.update());
+        this.lastTimestamp = null;
+        requestAnimationFrame((ts) => this.update(ts));
     }
 
     draw() {
