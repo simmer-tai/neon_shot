@@ -294,10 +294,15 @@ body.safe-zone {
 /* ホバー時にグローを強化 */
 .card-wrapper:hover .glow-path-a,
 .card-wrapper:hover .glow-path-b {
-    filter: drop-shadow(0 0 8px currentColor)
-            drop-shadow(0 0 20px currentColor)
-            drop-shadow(0 0 40px currentColor)
-            drop-shadow(0 0 60px currentColor);
+    filter: drop-shadow(0 0 6px currentColor)
+            drop-shadow(0 0 14px currentColor)
+            drop-shadow(0 0 28px currentColor);
+}
+
+/* 退出時にグロー専用レイヤーも消す */
+.card-wrapper.exit .glow-path-a,
+.card-wrapper.exit .glow-path-b {
+    animation: erase-path 0.3s ease-out forwards;
 }
 
 #card-candidates {
@@ -388,11 +393,19 @@ body.safe-zone {
     stroke-width: 1px;
     stroke-dasharray: 1000;
     stroke-dashoffset: 1000;
-    transition: stroke-dashoffset 0.2s ease-in-out;
+    transition: stroke-dashoffset 0.6s ease-in-out,
+                filter 0.1s ease,
+                opacity 0.1s ease;
     opacity: 0.7;
 }
 
 .card:hover .path-a-inner, .card:hover .path-b-inner {
+    stroke-dashoffset: 0;
+}
+
+/* カード選択画面・ビルド画面両方で確実に効くよう特異度を上げる */
+.card-wrapper:hover .path-a-inner,
+.card-wrapper:hover .path-b-inner {
     stroke-dashoffset: 0;
 }
 
@@ -457,6 +470,12 @@ body.safe-zone {
 
 .card.exit .path-a, .card.exit .path-b {
     animation: erase-path 0.3s ease-out forwards;
+}
+
+.card.exit .path-a-inner,
+.card.exit .path-b-inner {
+    stroke-dashoffset: 1000;
+    transition: stroke-dashoffset 0.2s ease-out;
 }
 
 .card.exit .card-fill {

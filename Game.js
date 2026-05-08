@@ -212,6 +212,18 @@ export class Game {
 
     // --- カードシステム関連 ---
 
+    resetAnimations(wrapper) {
+        requestAnimationFrame(() => {
+            const paths = wrapper.querySelectorAll('.path-a, .path-b, .path-a-inner, .path-b-inner, .card-fill, .card-content, .glow-path-a, .glow-path-b');
+            paths.forEach(p => {
+                p.style.animationName = 'none';
+                requestAnimationFrame(() => {
+                    p.style.animationName = '';
+                });
+            });
+        });
+    }
+
     showCardSelection() {
         // メインカード未選択の場合、メインカード選択フェーズを実行
         if (this.equippedMainCard === null) {
@@ -236,6 +248,11 @@ export class Game {
             const wrapper = this.createCardElement(card, { isMain: true, size: 'lg' });
             const cardEl = wrapper.querySelector('.card');
             wrapper.addEventListener('click', () => {
+                // すべてのカードのクリックを即座に無効化
+                this.cardCandidatesContainer.querySelectorAll('.card-wrapper').forEach(w => {
+                    w.style.pointerEvents = 'none';
+                });
+
                 // メインカード選択
                 this.equippedMainCard = card;
 
@@ -247,6 +264,7 @@ export class Game {
                     const otherWrapper = this.cardCandidatesContainer.children[i];
                     const otherCardEl = otherWrapper.querySelector('.card');
                     if (otherCardEl !== cardEl) {
+                        otherWrapper.classList.add('exit');
                         otherCardEl.classList.add('exit');
                     }
                 });
@@ -265,6 +283,7 @@ export class Game {
                 }, 1000);
             });
             this.cardCandidatesContainer.appendChild(wrapper);
+            this.resetAnimations(wrapper);
         });
 
         this.cardSelectionUI.classList.remove('hidden');
@@ -279,6 +298,11 @@ export class Game {
             const wrapper = this.createCardElement(card, { size: 'lg' });
             const cardEl = wrapper.querySelector('.card');
             wrapper.addEventListener('click', () => {
+                // すべてのカードのクリックを即座に無効化
+                this.cardCandidatesContainer.querySelectorAll('.card-wrapper').forEach(w => {
+                    w.style.pointerEvents = 'none';
+                });
+
                 // 選択アニメーション開始
                 this.inventory.push(card);
 
@@ -290,6 +314,7 @@ export class Game {
                     const otherWrapper = this.cardCandidatesContainer.children[i];
                     const otherCardEl = otherWrapper.querySelector('.card');
                     if (otherCardEl !== cardEl) {
+                        otherWrapper.classList.add('exit');
                         otherCardEl.classList.add('exit');
                     }
                 });
@@ -306,6 +331,7 @@ export class Game {
                 }, 1000);
             });
             this.cardCandidatesContainer.appendChild(wrapper);
+            this.resetAnimations(wrapper);
         });
 
         this.cardSelectionUI.classList.remove('hidden');
