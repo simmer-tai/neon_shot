@@ -84,8 +84,9 @@ export class Player {
 
         this.vx += ax * this.acceleration * dt;
         this.vy += ay * this.acceleration * dt;
-        this.vx *= Math.pow(this.friction, dt);
-        this.vy *= Math.pow(this.friction, dt);
+        const frictionDt = dt === 1 ? this.friction : Math.pow(this.friction, dt);
+        this.vx *= frictionDt;
+        this.vy *= frictionDt;
 
         const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
         if (speed > this.maxSpeed) {

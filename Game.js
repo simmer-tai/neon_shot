@@ -26,6 +26,10 @@ export class Game {
         this.player = new Player();
         this.bullets = [];
         this.enemies = [];
+
+        // オブジェクトプール（DOM生成の削減）
+        this.bulletPool = [];
+        this.activeBullets = [];
         this.particles = [];
         this.impactEffects = [];
         this.bounds = { width: window.innerWidth, height: window.innerHeight };
@@ -61,6 +65,15 @@ export class Game {
         // フレームレート独立化
         this.lastTimestamp = null;
 
+        // マウス位置追跡（rAF同期用）
+        this.mouseX = window.innerWidth / 2;
+        this.mouseY = window.innerHeight / 2;
+
+        // UI更新の最適化用
+        this._lastHp = 3;
+        this._lastPhase = 'BATTLE';
+        this._lastTimeLeft = 60;
+
         // トレイル描画用Canvas
         this.trailCanvas = document.createElement('canvas');
         this.trailCanvas.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;z-index:1;';
@@ -93,12 +106,15 @@ export class Game {
             this.trailCanvas.width = window.innerWidth;
             this.trailCanvas.height = window.innerHeight;
         });
+        // マウス座標を常に追跡（射撃はrAFループ内で処理）
+        window.addEventListener('mousemove', (e) => {
+            this.mouseX = e.clientX;
+            this.mouseY = e.clientY;
+        });
         window.addEventListener('mousedown', (e) => {
             this.isMouseDown = true;
             if (this.isGameOver) {
                 this.restart();
-            } else if (!this.isBuildMode && this.phase === 'BATTLE') {
-                this.shoot(e.clientX, e.clientY);
             }
         });
         window.addEventListener('mouseup', () => {
@@ -142,6 +158,26 @@ export class Game {
         }
     }
 
+    getBullet(x, y, angle, speed, options = {}) {
+        let bullet;
+        if (this.bulletPool.length > 0) {
+            bullet = this.bulletPool.pop();
+            bullet.reset(x, y, angle, speed, options);
+            bullet.activate(this.container);
+        } else {
+            bullet = new Bullet(x, y, angle, this.container, speed, options);
+            bullet.activate(this.container);
+        }
+        return bullet;
+    }
+
+    returnBullet(bullet) {
+        if (bullet.element.parentNode) {
+            this.container.removeChild(bullet.element);
+        }
+        this.bulletPool.push(bullet);
+    }
+
     shoot(tx, ty) {
         const x = this.player.x;
         const y = this.player.y;
@@ -153,7 +189,7 @@ export class Game {
             if (now - this.lastFireTime < this.player.fireRate) return;
             this.lastFireTime = now;
 
-            this.bullets.push(new Bullet(x, y, angle, this.container, this.player.bulletSpeed, {
+            this.bullets.push(this.getBullet(x, y, angle, this.player.bulletSpeed, {
                 isPiercing: this.player.piercingCount > 0,
                 reflectCount: this.player.reflectCount
             }));
@@ -161,7 +197,7 @@ export class Game {
             // マルチショット判定
             if (Math.random() < this.player.multiShotChance) {
                 const spread = 0.2;
-                this.bullets.push(new Bullet(x, y, angle + spread, this.container, this.player.bulletSpeed, {
+                this.bullets.push(this.getBullet(x, y, angle + spread, this.player.bulletSpeed, {
                     isPiercing: this.player.piercingCount > 0,
                     reflectCount: this.player.reflectCount
                 }));
@@ -176,7 +212,7 @@ export class Game {
             for (let i = -2; i <= 2; i++) {
                 const bulletAngle = angle + (i * spread);
                 const speed = this.player.bulletSpeed * 0.7;
-                this.bullets.push(new Bullet(x, y, bulletAngle, this.container, speed, {
+                this.bullets.push(this.getBullet(x, y, bulletAngle, speed, {
                     isPiercing: this.player.piercingCount > 0,
                     reflectCount: this.player.reflectCount
                 }));
@@ -188,7 +224,7 @@ export class Game {
             this.lastFireTime = now;
 
             const speed = this.player.bulletSpeed * 3;
-            this.bullets.push(new Bullet(x, y, angle, this.container, speed, {
+            this.bullets.push(this.getBullet(x, y, angle, speed, {
                 isPiercing: true,
                 reflectCount: this.player.reflectCount
             }));
@@ -199,7 +235,7 @@ export class Game {
             this.lastFireTime = now;
 
             const speed = this.player.bulletSpeed * 1.2;
-            this.bullets.push(new Bullet(x, y, angle, this.container, speed, {
+            this.bullets.push(this.getBullet(x, y, angle, speed, {
                 isHoming: true,
                 isPiercing: this.player.piercingCount > 0,
                 reflectCount: this.player.reflectCount
@@ -655,6 +691,7 @@ export class Game {
         if (this.isGameOver) return;
         if (this.isBuildMode) {
             // ビルド中はゲーム内更新を停止するが、アニメーションループは維持
+            this.lastTimestamp = timestamp;
             requestAnimationFrame((ts) => this.update(ts));
             return;
         }
@@ -674,6 +711,11 @@ export class Game {
 
         // プレイヤー更新
         this.player.update(this.keys, this.bounds, deltaTime);
+
+        // マウスボタンが押されている場合、rAFループ内で射撃（レイアウトスラッシング削減）
+        if (this.isMouseDown && !this.isBuildMode && this.phase === 'BATTLE') {
+            this.shoot(this.mouseX, this.mouseY);
+        }
 
         // 敵の生成 (戦闘フェーズのみ)
         if (this.phase === 'BATTLE') {
@@ -714,7 +756,7 @@ export class Game {
             const b = this.bullets[i];
             b.update(this.enemies, deltaTime, this.bounds);
             if (b.isOffScreen(this.bounds)) {
-                b.destroy();
+                this.returnBullet(b);
                 this.bullets.splice(i, 1);
             }
         }
@@ -762,7 +804,7 @@ export class Game {
                     e.destroy();
                     this.enemies.splice(i, 1);
                     if (!b.isPiercing) {
-                        b.destroy();
+                        this.returnBullet(b);
                         this.bullets.splice(j, 1);
                     }
                     this.killCount++;
@@ -807,9 +849,20 @@ export class Game {
     }
 
     updateUI() {
-        this.hpUI.textContent = `HP: ${this.player.hp}`;
-        this.phaseNameUI.textContent = this.phase === 'BATTLE' ? 'BATTLE PHASE' : 'SAFE ZONE';
-        this.phaseTimerUI.textContent = `${Math.ceil(this.phaseTimeLeft)}s`;
+        if (this.player.hp !== this._lastHp) {
+            this.hpUI.textContent = `HP: ${this.player.hp}`;
+            this._lastHp = this.player.hp;
+        }
+        const newPhase = this.phase === 'BATTLE' ? 'BATTLE PHASE' : 'SAFE ZONE';
+        if (newPhase !== this._lastPhase) {
+            this.phaseNameUI.textContent = newPhase;
+            this._lastPhase = newPhase;
+        }
+        const newTime = Math.ceil(this.phaseTimeLeft);
+        if (newTime !== this._lastTimeLeft) {
+            this.phaseTimerUI.textContent = `${newTime}s`;
+            this._lastTimeLeft = newTime;
+        }
     }
 
     gameOver() {
@@ -823,7 +876,7 @@ export class Game {
         this.player.reset(this.bounds);
 
         // 残っている弾と敵を消去
-        this.bullets.forEach(b => b.destroy());
+        this.bullets.forEach(b => this.returnBullet(b));
         this.enemies.forEach(e => e.destroy());
         this.particles.forEach(p => p.el.remove());
         this.particleSystem.clear();

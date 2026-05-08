@@ -10,6 +10,10 @@ export class Bullet {
 
         // オプションから特殊フラグを取得
         this.isPiercing = options.isPiercing || (options.piercingCount > 0) || false;
+        if (this.isPiercing) {
+            this.element.style.width = '40px';
+            this.element.style.height = '7px';
+        }
         this.isHoming = options.isHoming || false;
         this.reflectCount = options.reflectCount || 0; // 残りバウンド回数
         this.piercingCount = options.piercingCount || 0;
@@ -21,7 +25,29 @@ export class Bullet {
 
         this.element = document.createElement('div');
         this.element.className = 'bullet';
-        this.container.appendChild(this.element);
+    }
+
+    // DOMにappendしてアクティブ化（プール利用時）
+    activate(container) {
+        if (!this.element.parentNode) {
+            container.appendChild(this.element);
+        }
+    }
+
+    // 状態をリセットしてプールに戻す準備
+    reset(x, y, angle, speed, options = {}) {
+        this.x = x;
+        this.y = y;
+        this.angle = angle;
+        this.speed = speed;
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed;
+        this.isPiercing = options.isPiercing || (options.piercingCount > 0) || false;
+        this.isHoming = options.isHoming || false;
+        this.reflectCount = options.reflectCount || 0;
+        this.piercingCount = options.piercingCount || 0;
+        this.trail = [];
+        this._trailTick = 0;
     }
 
     update(enemies = [], deltaTime = 16.67, bounds = { width: 9999, height: 9999 }) {
