@@ -147,12 +147,18 @@ export class Game {
             if (now - this.lastFireTime < this.player.fireRate) return;
             this.lastFireTime = now;
 
-            this.bullets.push(new Bullet(x, y, angle, this.container, this.player.bulletSpeed));
+            this.bullets.push(new Bullet(x, y, angle, this.container, this.player.bulletSpeed, {
+                isPiercing: this.player.piercingCount > 0,
+                reflectCount: this.player.reflectCount
+            }));
 
             // マルチショット判定
             if (Math.random() < this.player.multiShotChance) {
                 const spread = 0.2;
-                this.bullets.push(new Bullet(x, y, angle + spread, this.container, this.player.bulletSpeed));
+                this.bullets.push(new Bullet(x, y, angle + spread, this.container, this.player.bulletSpeed, {
+                    isPiercing: this.player.piercingCount > 0,
+                    reflectCount: this.player.reflectCount
+                }));
             }
         } else if (this.equippedMainCard.id === 'shotgun') {
             // ショットガン: 5発扇状
@@ -164,7 +170,10 @@ export class Game {
             for (let i = -2; i <= 2; i++) {
                 const bulletAngle = angle + (i * spread);
                 const speed = this.player.bulletSpeed * 0.7;
-                this.bullets.push(new Bullet(x, y, bulletAngle, this.container, speed));
+                this.bullets.push(new Bullet(x, y, bulletAngle, this.container, speed, {
+                    isPiercing: this.player.piercingCount > 0,
+                    reflectCount: this.player.reflectCount
+                }));
             }
         } else if (this.equippedMainCard.id === 'sniper') {
             // スナイパー: 貫通弾
@@ -173,7 +182,10 @@ export class Game {
             this.lastFireTime = now;
 
             const speed = this.player.bulletSpeed * 3;
-            this.bullets.push(new Bullet(x, y, angle, this.container, speed, { isPiercing: true }));
+            this.bullets.push(new Bullet(x, y, angle, this.container, speed, {
+                isPiercing: true,
+                reflectCount: this.player.reflectCount
+            }));
         } else if (this.equippedMainCard.id === 'homing') {
             // ホーミング: 追尾弾
             const now = Date.now();
@@ -181,7 +193,11 @@ export class Game {
             this.lastFireTime = now;
 
             const speed = this.player.bulletSpeed * 1.2;
-            this.bullets.push(new Bullet(x, y, angle, this.container, speed, { isHoming: true }));
+            this.bullets.push(new Bullet(x, y, angle, this.container, speed, {
+                isHoming: true,
+                isPiercing: this.player.piercingCount > 0,
+                reflectCount: this.player.reflectCount
+            }));
         }
     }
 
@@ -429,6 +445,42 @@ export class Game {
     }
 
     refreshBuildUI() {
+        // ── ステータスパネル更新 ──
+        const statusPanel = document.getElementById('status-panel');
+        if (statusPanel) {
+            const isSniper   = this.equippedMainCard?.id === 'sniper';
+            const isShotgun  = this.equippedMainCard?.id === 'shotgun';
+
+            const damage     = 1; // 将来拡張用固定値
+            const pierce     = isSniper  ? 5 : 1;
+            const multiShot  = isShotgun ? 1 : Math.round(this.player.multiShotChance * 100);
+            const multiUnit  = isShotgun ? '' : '%';
+
+            statusPanel.innerHTML = `
+                <div class="status-item">
+                    <span class="status-label">ダメージ</span>
+                    <span class="status-value">${damage}</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">弾速</span>
+                    <span class="status-value">${this.player.bulletSpeed.toFixed(1)}</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">発射間隔</span>
+                    <span class="status-value">${this.player.fireRate.toFixed(0)}<span class="status-unit">ms</span></span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">マルチショット</span>
+                    <span class="status-value">${multiShot}<span class="status-unit">${multiUnit}</span></span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">貫通</span>
+                    <span class="status-value">${pierce}</span>
+                </div>
+            `;
+        }
+
+        // ── 以下、既存コード ──
         if (!this.inventoryTitle) this.inventoryTitle = document.getElementById('inventory-title');
 
         const totalCards = this.inventory.length + this.equippedSlots.filter(s => s).length;
@@ -651,7 +703,7 @@ export class Game {
         // 弾の更新
         for (let i = this.bullets.length - 1; i >= 0; i--) {
             const b = this.bullets[i];
-            b.update(this.enemies, deltaTime);
+            b.update(this.enemies, deltaTime, this.bounds);
             if (b.isOffScreen(this.bounds)) {
                 b.destroy();
                 this.bullets.splice(i, 1);

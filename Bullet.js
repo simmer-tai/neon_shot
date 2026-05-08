@@ -9,8 +9,10 @@ export class Bullet {
         this.container = container;
 
         // オプションから特殊フラグを取得
-        this.isPiercing = options.isPiercing || false;
+        this.isPiercing = options.isPiercing || (options.piercingCount > 0) || false;
         this.isHoming = options.isHoming || false;
+        this.reflectCount = options.reflectCount || 0; // 残りバウンド回数
+        this.piercingCount = options.piercingCount || 0;
 
         // トレイル用の過去座標履歴（最大10フレーム分）
         this.trail = [];
@@ -22,7 +24,7 @@ export class Bullet {
         this.container.appendChild(this.element);
     }
 
-    update(enemies = [], deltaTime = 16.67) {
+    update(enemies = [], deltaTime = 16.67, bounds = { width: 9999, height: 9999 }) {
         const dt = deltaTime / 16.67; // 60fps基準での係数
 
         // ホーミング処理
@@ -65,6 +67,18 @@ export class Bullet {
         this.x += this.vx * dt;
         this.y += this.vy * dt;
 
+        // バウンド処理（反射カード）
+        if (this.reflectCount > 0) {
+            if (this.x < 0 || this.x > bounds.width) {
+                this.vx *= -1;
+                this.reflectCount--;
+            }
+            if (this.y < 0 || this.y > bounds.height) {
+                this.vy *= -1;
+                this.reflectCount--;
+            }
+        }
+
         // 1フレームおきにトレイル履歴を更新
         this._trailTick++;
         if (this._trailTick % 2 === 0) {
@@ -76,6 +90,7 @@ export class Bullet {
     }
 
     isOffScreen(bounds) {
+        if (this.reflectCount > 0) return false;
         return (this.x < -100 || this.x > bounds.width + 100 || this.y < -100 || this.y > bounds.height + 100);
     }
 

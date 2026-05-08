@@ -40,21 +40,34 @@
         <!-- ビルド画面 -->
         <div id="build-ui" class="hidden overlay-ui">
             <canvas id="build-grid-canvas"></canvas>
-            <h2 id="build-title">BUILD SLOTS</h2>
             <div class="build-layout">
-                <div class="build-left">
-                    <div id="slot-container">
-                        <div class="slot" data-index="0"></div>
-                        <div class="slot" data-index="1"></div>
-                        <div class="slot" data-index="2"></div>
-                        <div class="slot" data-index="3"></div>
+                <!-- 左：ステータス -->
+                <div class="build-status">
+                    <h3 class="build-section-title">STATUS</h3>
+                    <div id="status-panel">
+                        <!-- JSで動的に更新 -->
                     </div>
                 </div>
+
                 <div class="vertical-divider"></div>
-                <div class="build-right">
-                    <h3 id="inventory-title">INVENTORY (0/0)</h3>
-                    <div id="inventory-container">
-                        <!-- JSで動的に追加 -->
+
+                <!-- 右：スロット＋インベントリ -->
+                <div class="build-main">
+                    <div class="build-slots-area">
+                        <h3 class="build-section-title">BUILD SLOTS</h3>
+                        <div id="slot-container">
+                            <div class="slot" data-index="0"></div>
+                            <div class="slot" data-index="1"></div>
+                            <div class="slot" data-index="2"></div>
+                            <div class="slot" data-index="3"></div>
+                        </div>
+                    </div>
+
+                    <div class="build-divider-h"></div>
+
+                    <div class="build-inventory-area">
+                        <h3 id="inventory-title" class="build-section-title">INVENTORY (0/0)</h3>
+                        <div id="inventory-container"></div>
                     </div>
                 </div>
             </div>
