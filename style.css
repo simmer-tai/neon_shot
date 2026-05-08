@@ -75,6 +75,20 @@ body, html {
     filter: blur(0.8px);
 }
 
+.particle-square {
+    position: absolute;
+    border-radius: 0;
+    border: 3px solid #ff0055;
+    background-color: transparent;
+    box-shadow: 0 0 6px #ff0055, 0 0 12px #ff0055, 0 0 24px #ff0055;
+    filter: blur(0.5px);
+    pointer-events: none;
+    will-change: transform;
+    opacity: 1;
+    top: 0;
+    left: 0;
+}
+
 /* --- 追加UIスタイル --- */
 
 #ui-layer {

@@ -2,6 +2,7 @@ import { Player } from './Player.js';
 import { Bullet } from './Bullet.js';
 import { Enemy } from './Enemy.js';
 import { CardSystem, CARDS, MAIN_CARDS } from './CardSystem.js';
+import { ParticleSystem } from './ParticleSystem.js';
 
 export class Game {
     constructor() {
@@ -27,6 +28,9 @@ export class Game {
         this.particles = [];
         this.bounds = { width: window.innerWidth, height: window.innerHeight };
         this.keys = { w: false, a: false, s: false, d: false };
+
+        // パーティクルシステムの初期化
+        this.particleSystem = new ParticleSystem(this.container);
 
         // ゲーム状態
         this.isGameOver = false;
@@ -681,7 +685,10 @@ export class Game {
             }
         }
 
-        // パーティクルの更新
+        // パーティクルシステムの更新
+        this.particleSystem.update(deltaTime);
+
+        // 既存パーティクルの更新（レガシー）
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const p = this.particles[i];
             p.life -= deltaTime;
@@ -724,7 +731,9 @@ export class Game {
                 const distSq = dx * dx + dy * dy;
                 const hitRadius = e.radius + 10;
                 if (distSq < hitRadius * hitRadius) {
-                    this.spawnDeathParticles(e.x, e.y);
+                    // 弾が飛んできた方向を計算
+                    const hitAngle = Math.atan2(b.vy, b.vx);
+                    this.particleSystem.spawnEnemyDeathParticles(e.x, e.y, hitAngle, this.container);
                     e.destroy();
                     this.enemies.splice(i, 1);
                     if (!b.isPiercing) {
@@ -745,7 +754,9 @@ export class Game {
             const distSq = dx * dx + dy * dy;
             const hitRadius = e.radius + this.player.radius;
             if (distSq < hitRadius * hitRadius) {
-                this.spawnDeathParticles(e.x, e.y);
+                // 敵がプレイヤーから遠ざかる方向にパーティクルを飛ばす
+                const hitAngle = Math.atan2(dy, dx);
+                this.particleSystem.spawnEnemyDeathParticles(e.x, e.y, hitAngle, this.container);
                 if (this.player.takeDamage()) {
                     if (this.player.hp <= 0) {
                         this.gameOver();
@@ -781,6 +792,7 @@ export class Game {
         this.bullets.forEach(b => b.destroy());
         this.enemies.forEach(e => e.destroy());
         this.particles.forEach(p => p.el.remove());
+        this.particleSystem.clear();
         this.bullets = [];
         this.enemies = [];
         this.particles = [];
