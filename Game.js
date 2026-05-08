@@ -193,7 +193,7 @@ export class Game {
         const candidates = CardSystem.getMainCardCandidates();
 
         candidates.forEach((card) => {
-            const wrapper = this.createCardElement(card, true);
+            const wrapper = this.createCardElement(card, { isMain: true, size: 'lg' });
             const cardEl = wrapper.querySelector('.card');
             wrapper.addEventListener('click', () => {
                 // メインカード選択
@@ -236,7 +236,7 @@ export class Game {
         const candidates = CardSystem.getRandomCandidates(4);
 
         candidates.forEach((card, index) => {
-            const wrapper = this.createCardElement(card, false);
+            const wrapper = this.createCardElement(card, { size: 'lg' });
             const cardEl = wrapper.querySelector('.card');
             wrapper.addEventListener('click', () => {
                 // 選択アニメーション開始
@@ -271,27 +271,36 @@ export class Game {
         this.cardSelectionUI.classList.remove('hidden');
     }
 
-    createCardElement(card, useColor = true, context = 'selection') {
-        // コンテキストに応じたSVG設定
-        let viewBox = "0 0 200 300";
-        let pathA = "M0,0 H184 L200,16 V300";
-        let pathB = "M200,300 H16 L0,284 V0";
-        let pathAInner = "M6,6 H178 L194,22 V294";
-        let pathBInner = "M194,294 H22 L6,278 V6";
+    createCardElement(card, options = {}) {
+        const { isMain = false, size = 'lg' } = options;
 
-        if (context === 'inventory') {
-            viewBox = "0 0 100 140";
-            pathA = "M1,1 H89 L99,11 V139";
-            pathB = "M99,139 H11 L1,129 V1";
-            pathAInner = "M7,7 H83 L93,17 V133";
-            pathBInner = "M93,133 H17 L7,123 V7";
-        } else if (context === 'slot') {
-            viewBox = "0 0 160 210";
-            pathA = "M1,1 H149 L159,11 V209";
-            pathB = "M159,209 H11 L1,199 V1";
-            pathAInner = "M7,7 H143 L153,17 V203";
-            pathBInner = "M153,203 H17 L7,193 V7";
-        }
+        // サイズ設定
+        const SIZE_CONFIG = {
+            lg: {
+                viewBox: '0 0 200 300',
+                pathA: 'M0,0 H184 L200,16 V300',
+                pathB: 'M200,300 H16 L0,284 V0',
+                pathAInner: 'M6,6 H178 L194,22 V294',
+                pathBInner: 'M194,294 H22 L6,278 V6'
+            },
+            md: {
+                viewBox: '0 0 160 210',
+                pathA: 'M1,1 H149 L159,11 V209',
+                pathB: 'M159,209 H11 L1,199 V1',
+                pathAInner: 'M7,7 H143 L153,17 V203',
+                pathBInner: 'M153,203 H17 L7,193 V7'
+            },
+            sm: {
+                viewBox: '0 0 100 140',
+                pathA: 'M1,1 H89 L99,11 V139',
+                pathB: 'M99,139 H11 L1,129 V1',
+                pathAInner: 'M7,7 H83 L93,17 V133',
+                pathBInner: 'M93,133 H17 L7,123 V7'
+            }
+        };
+
+        const config = SIZE_CONFIG[size] || SIZE_CONFIG.lg;
+        const { viewBox, pathA, pathB, pathAInner, pathBInner } = config;
 
         // ラッパーを作成
         const wrapper = document.createElement('div');
@@ -299,7 +308,7 @@ export class Game {
 
         // カード本体
         const div = document.createElement('div');
-        div.className = 'card';
+        div.className = `card card--${size}`;
 
         // アニメーション用の枠線SVG（カード内部用）
         const svg = `
@@ -324,7 +333,7 @@ export class Game {
         const fill = '<div class="card-fill"></div>';
 
         let displayColor = '#00ffff';
-        if (useColor) {
+        if (isMain) {
             div.classList.add('main-card');
             displayColor = '#ffff00';
             div.style.borderColor = displayColor;
@@ -364,7 +373,7 @@ export class Game {
             const slot = document.createElement('div');
             slot.className = 'slot';
             if (card) {
-                const wrapper = this.createCardElement(card, false, 'slot');
+                const wrapper = this.createCardElement(card, { size: 'md' });
                 const cardEl = wrapper.querySelector('.card');
 
                 // オーバーレイ追加
@@ -382,7 +391,7 @@ export class Game {
         // インベントリ更新
         this.inventoryContainer.innerHTML = '';
         this.inventory.forEach((card, index) => {
-            const wrapper = this.createCardElement(card, false, 'inventory');
+            const wrapper = this.createCardElement(card, { size: 'sm' });
             const cardEl = wrapper.querySelector('.card');
 
             // オーバーレイ追加

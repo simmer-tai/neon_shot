@@ -301,23 +301,40 @@ body.safe-zone {
 
 .card {
     position: relative;
-    width: 200px;
-    height: 300px;
     background-color: transparent;
     cursor: pointer;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    padding: 40px 20px;
     text-align: center;
     color: #00ffff;
     overflow: visible;
-    /* 内容を枠線に合わせて切り抜く */
-    clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
     will-change: transform, filter, box-shadow;
     transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.1s ease;
     isolation: isolate;
+}
+
+/* サイズバリエーション */
+.card--lg {
+    width: 200px;
+    height: 300px;
+    padding: 40px 20px;
+    clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+}
+
+.card--md {
+    width: 160px;
+    height: 210px;
+    padding: 15px;
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+}
+
+.card--sm {
+    width: 100px;
+    height: 140px;
+    padding: 10px;
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
 }
 
 /* SVG枠線 */
@@ -526,22 +543,17 @@ body.safe-zone {
 }
 
 /* ビルド画面内カード共通デザイン */
+/* ビルドUI用カードの追加スタイル */
 #build-ui .card {
-    width: 100px;
-    height: 140px;
-    padding: 10px;
     color: #00ffff;
     border: none;
     border-radius: 0;
     background: linear-gradient(135deg, rgba(0, 255, 255, 0.05) 0%, transparent 100%);
     box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
-    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
     transition: all 0.1s ease;
     display: flex;
-    flex-direction: column;
     justify-content: center;
     align-items: center;
-    text-align: center;
     position: relative;
 }
 
@@ -687,37 +699,36 @@ body.safe-zone {
 /* --- カード フォントサイズ強化 --- */
 
 /* 選択画面の大カード */
-#card-candidates .card .card-name {
+/* サイズ別カード内フォントスタイル */
+.card--lg .card-name {
     font-size: 22px;
     letter-spacing: 3px;
     font-weight: bold;
 }
 
-#card-candidates .card .card-desc {
+.card--lg .card-desc {
     font-size: 15px;
     line-height: 1.6;
 }
 
-/* ビルド画面 インベントリカード */
-#inventory-container .card .card-name {
-    font-size: 13px;
-    letter-spacing: 1px;
-}
-
-#inventory-container .card .card-desc {
-    font-size: 10px;
-    line-height: 1.3;
-}
-
-/* ビルド画面 スロットカード */
-#slot-container .card .card-name {
+.card--md .card-name {
     font-size: 15px;
     letter-spacing: 1px;
 }
 
-#slot-container .card .card-desc {
+.card--md .card-desc {
     font-size: 11px;
     line-height: 1.4;
+}
+
+.card--sm .card-name {
+    font-size: 13px;
+    letter-spacing: 1px;
+}
+
+.card--sm .card-desc {
+    font-size: 10px;
+    line-height: 1.3;
 }
 
 /* --- SVGパス ネオングロー効果 --- */
