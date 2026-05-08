@@ -193,8 +193,9 @@ export class Game {
         const candidates = CardSystem.getMainCardCandidates();
 
         candidates.forEach((card) => {
-            const cardEl = this.createCardElement(card, true);
-            cardEl.addEventListener('click', () => {
+            const wrapper = this.createCardElement(card, true);
+            const cardEl = wrapper.querySelector('.card');
+            wrapper.addEventListener('click', () => {
                 // メインカード選択
                 this.equippedMainCard = card;
 
@@ -203,7 +204,8 @@ export class Game {
 
                 // 他のカードを逆再生で消す
                 candidates.forEach((_, i) => {
-                    const otherCardEl = this.cardCandidatesContainer.children[i];
+                    const otherWrapper = this.cardCandidatesContainer.children[i];
+                    const otherCardEl = otherWrapper.querySelector('.card');
                     if (otherCardEl !== cardEl) {
                         otherCardEl.classList.add('exit');
                     }
@@ -222,7 +224,7 @@ export class Game {
                     this.showSubCardSelection();
                 }, 1000);
             });
-            this.cardCandidatesContainer.appendChild(cardEl);
+            this.cardCandidatesContainer.appendChild(wrapper);
         });
 
         this.cardSelectionUI.classList.remove('hidden');
@@ -234,8 +236,9 @@ export class Game {
         const candidates = CardSystem.getRandomCandidates(4);
 
         candidates.forEach((card, index) => {
-            const cardEl = this.createCardElement(card, false);
-            cardEl.addEventListener('click', () => {
+            const wrapper = this.createCardElement(card, false);
+            const cardEl = wrapper.querySelector('.card');
+            wrapper.addEventListener('click', () => {
                 // 選択アニメーション開始
                 this.inventory.push(card);
 
@@ -244,7 +247,8 @@ export class Game {
 
                 // 他のカードを逆再生で消す
                 candidates.forEach((_, i) => {
-                    const otherCardEl = this.cardCandidatesContainer.children[i];
+                    const otherWrapper = this.cardCandidatesContainer.children[i];
+                    const otherCardEl = otherWrapper.querySelector('.card');
                     if (otherCardEl !== cardEl) {
                         otherCardEl.classList.add('exit');
                     }
@@ -261,16 +265,13 @@ export class Game {
                     this.openBuildUI();
                 }, 1000);
             });
-            this.cardCandidatesContainer.appendChild(cardEl);
+            this.cardCandidatesContainer.appendChild(wrapper);
         });
 
         this.cardSelectionUI.classList.remove('hidden');
     }
 
     createCardElement(card, useColor = true, context = 'selection') {
-        const div = document.createElement('div');
-        div.className = 'card';
-
         // コンテキストに応じたSVG設定
         let viewBox = "0 0 200 300";
         let pathA = "M0,0 H184 L200,16 V300";
@@ -292,7 +293,15 @@ export class Game {
             pathBInner = "M153,203 H17 L7,193 V7";
         }
 
-        // アニメーション用の枠線SVG
+        // ラッパーを作成
+        const wrapper = document.createElement('div');
+        wrapper.className = 'card-wrapper';
+
+        // カード本体
+        const div = document.createElement('div');
+        div.className = 'card';
+
+        // アニメーション用の枠線SVG（カード内部用）
         const svg = `
             <svg class="card-border" viewBox="${viewBox}" overflow="visible">
                 <path class="path-a" d="${pathA}" />
@@ -302,15 +311,27 @@ export class Game {
             </svg>
         `;
 
+        // グロー専用SVGレイヤー（card の外側に配置）
+        const glowLayer = document.createElement('div');
+        glowLayer.className = 'card-glow-layer';
+        glowLayer.innerHTML = `
+            <svg class="card-glow-svg" viewBox="${viewBox}" overflow="visible">
+                <path class="glow-path-a" d="${pathA}" />
+                <path class="glow-path-b" d="${pathB}" />
+            </svg>
+        `;
+
         const fill = '<div class="card-fill"></div>';
 
+        let displayColor = '#00ffff';
         if (useColor) {
             div.classList.add('main-card');
-            const displayColor = '#ffff00';
+            displayColor = '#ffff00';
             div.style.borderColor = displayColor;
             div.style.boxShadow = `0 0 10px ${displayColor}44`;
             div.style.color = displayColor;
         }
+        glowLayer.style.color = displayColor;
 
         div.innerHTML = `
             ${svg}
@@ -320,7 +341,10 @@ export class Game {
                 <div class="card-desc">${card.description}</div>
             </div>
         `;
-        return div;
+
+        wrapper.appendChild(glowLayer);
+        wrapper.appendChild(div);
+        return wrapper;
     }
 
     openBuildUI() {
@@ -340,7 +364,8 @@ export class Game {
             const slot = document.createElement('div');
             slot.className = 'slot';
             if (card) {
-                const cardEl = this.createCardElement(card, false, 'slot');
+                const wrapper = this.createCardElement(card, false, 'slot');
+                const cardEl = wrapper.querySelector('.card');
 
                 // オーバーレイ追加
                 const overlay = document.createElement('div');
@@ -348,8 +373,8 @@ export class Game {
                 overlay.innerHTML = '<span class="overlay-text overlay-unequip">UNEQUIP</span>';
                 cardEl.appendChild(overlay);
 
-                cardEl.addEventListener('click', () => this.unequipCard(index));
-                slot.appendChild(cardEl);
+                wrapper.addEventListener('click', () => this.unequipCard(index));
+                slot.appendChild(wrapper);
             }
             this.slotContainer.appendChild(slot);
         });
@@ -357,7 +382,8 @@ export class Game {
         // インベントリ更新
         this.inventoryContainer.innerHTML = '';
         this.inventory.forEach((card, index) => {
-            const cardEl = this.createCardElement(card, false, 'inventory');
+            const wrapper = this.createCardElement(card, false, 'inventory');
+            const cardEl = wrapper.querySelector('.card');
 
             // オーバーレイ追加
             const overlay = document.createElement('div');
@@ -365,8 +391,8 @@ export class Game {
             overlay.innerHTML = '<span class="overlay-text overlay-equip">EQUIP</span>';
             cardEl.appendChild(overlay);
 
-            cardEl.addEventListener('click', () => this.equipCard(index));
-            this.inventoryContainer.appendChild(cardEl);
+            wrapper.addEventListener('click', () => this.equipCard(index));
+            this.inventoryContainer.appendChild(wrapper);
         });
     }
 

@@ -236,12 +236,65 @@ body.safe-zone {
     pointer-events: auto;
 }
 
+/* カードラッパー */
+.card-wrapper {
+    position: relative;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* グロー専用レイヤー（clip-pathの外側に存在） */
+.card-glow-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+    overflow: visible;
+}
+
+.card-glow-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+/* グローパス本体 */
+.glow-path-a,
+.glow-path-b {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2px;
+    filter: drop-shadow(0 0 6px currentColor)
+            drop-shadow(0 0 14px currentColor)
+            drop-shadow(0 0 28px currentColor);
+    transition: filter 0.1s ease;
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+    animation: draw-path 0.3s ease-out forwards;
+}
+
+/* ホバー時にグローを強化 */
+.card-wrapper:hover .glow-path-a,
+.card-wrapper:hover .glow-path-b {
+    filter: drop-shadow(0 0 8px currentColor)
+            drop-shadow(0 0 20px currentColor)
+            drop-shadow(0 0 40px currentColor)
+            drop-shadow(0 0 60px currentColor);
+}
+
 #card-candidates {
     display: flex;
     gap: 8px;
 }
 
-#card-candidates .card {
+#card-candidates .card-wrapper {
     /* 選択画面の大カードはグロー用に余白を確保 */
     margin: 16px;
 }
@@ -672,11 +725,8 @@ body.safe-zone {
 .card .path-a,
 .card .path-b {
     stroke-width: 2.5;
-    filter: drop-shadow(0 0 4px currentColor)
-            drop-shadow(0 0 8px currentColor)
-            drop-shadow(0 0 16px currentColor);
+    filter: none;
     transition: filter 0.1s ease;
-    overflow: visible;
 }
 
 .card .path-a-inner,
@@ -687,13 +737,10 @@ body.safe-zone {
     transition: filter 0.1s ease, opacity 0.1s ease, stroke-dashoffset 0.1s ease-in-out;
 }
 
-/* ホバー時はさらに強くグロー */
+/* 既存の.card内path-a/bのグロー効果は削除（グロー専用レイヤーで代替） */
 .card:hover .path-a,
 .card:hover .path-b {
-    filter: drop-shadow(0 0 6px currentColor)
-            drop-shadow(0 0 14px currentColor)
-            drop-shadow(0 0 28px currentColor)
-            drop-shadow(0 0 48px currentColor);
+    filter: none;
 }
 
 .card:hover .path-a-inner,
