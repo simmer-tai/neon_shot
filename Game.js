@@ -294,7 +294,7 @@ export class Game {
 
         // アニメーション用の枠線SVG
         const svg = `
-            <svg class="card-border" viewBox="${viewBox}">
+            <svg class="card-border" viewBox="${viewBox}" overflow="visible">
                 <path class="path-a" d="${pathA}" />
                 <path class="path-b" d="${pathB}" />
                 <path class="path-a-inner" d="${pathAInner}" />

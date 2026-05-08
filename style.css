@@ -238,7 +238,12 @@ body.safe-zone {
 
 #card-candidates {
     display: flex;
-    gap: 40px;
+    gap: 8px;
+}
+
+#card-candidates .card {
+    /* 選択画面の大カードはグロー用に余白を確保 */
+    margin: 16px;
 }
 
 .card {
@@ -254,11 +259,12 @@ body.safe-zone {
     padding: 40px 20px;
     text-align: center;
     color: #00ffff;
-    overflow: hidden;
+    overflow: visible;
     /* 内容を枠線に合わせて切り抜く */
     clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
     will-change: transform, filter, box-shadow;
     transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.1s ease;
+    isolation: isolate;
 }
 
 /* SVG枠線 */
@@ -269,6 +275,11 @@ body.safe-zone {
     width: 100%;
     height: 100%;
     pointer-events: none;
+    overflow: visible;
+}
+
+.card-border svg {
+    overflow: visible;
 }
 
 .path-a, .path-b {
@@ -661,10 +672,11 @@ body.safe-zone {
 .card .path-a,
 .card .path-b {
     stroke-width: 2.5;
-    filter: drop-shadow(0 0 3px currentColor)
-            drop-shadow(0 0 6px currentColor)
-            drop-shadow(0 0 12px currentColor);
+    filter: drop-shadow(0 0 4px currentColor)
+            drop-shadow(0 0 8px currentColor)
+            drop-shadow(0 0 16px currentColor);
     transition: filter 0.1s ease;
+    overflow: visible;
 }
 
 .card .path-a-inner,
@@ -678,10 +690,10 @@ body.safe-zone {
 /* ホバー時はさらに強くグロー */
 .card:hover .path-a,
 .card:hover .path-b {
-    filter: drop-shadow(0 0 4px currentColor)
-            drop-shadow(0 0 10px currentColor)
-            drop-shadow(0 0 20px currentColor)
-            drop-shadow(0 0 30px currentColor);
+    filter: drop-shadow(0 0 6px currentColor)
+            drop-shadow(0 0 14px currentColor)
+            drop-shadow(0 0 28px currentColor)
+            drop-shadow(0 0 48px currentColor);
 }
 
 .card:hover .path-a-inner,
