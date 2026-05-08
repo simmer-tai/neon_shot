@@ -26,6 +26,10 @@ export class Player {
         this.isInvincible = false;
         this.invincibleDuration = 1500; // 1.5秒
         this.invincibleTimer = 0;
+
+        // 強化カード関連
+        this.reflectCount = 0;   // バウンド回数
+        this.piercingCount = 0;  // 貫通数
     }
 
     /**
@@ -37,6 +41,8 @@ export class Player {
         let bulletSpeedMod = 0;
         let fireRateMod = 0;
         let multiShotMod = 0;
+        let reflectMod = 0;
+        let piercingMod = 0;
 
         equippedCards.forEach(card => {
             if (!card) return;
@@ -45,6 +51,8 @@ export class Player {
                 case 'bullet_speed': bulletSpeedMod += card.effectValue; break;
                 case 'fire_rate': fireRateMod += card.effectValue; break;
                 case 'multi_shot': multiShotMod += card.effectValue; break;
+                case 'reflect': reflectMod += card.effectValue; break;
+                case 'piercing': piercingMod += card.effectValue; break;
             }
         });
 
@@ -53,6 +61,8 @@ export class Player {
         this.bulletSpeed = this.baseBulletSpeed * (1 + bulletSpeedMod);
         this.fireRate = this.baseFireRate / (1 + fireRateMod); // 間隔なので割り算で短縮
         this.multiShotChance = multiShotMod; // 確率はそのまま加算
+        this.reflectCount = reflectMod;
+        this.piercingCount = piercingMod;
     }
 
     update(keys, bounds, deltaTime) {
@@ -74,8 +84,9 @@ export class Player {
 
         this.vx += ax * this.acceleration * dt;
         this.vy += ay * this.acceleration * dt;
-        this.vx *= Math.pow(this.friction, dt);
-        this.vy *= Math.pow(this.friction, dt);
+        const frictionDt = dt === 1 ? this.friction : Math.pow(this.friction, dt);
+        this.vx *= frictionDt;
+        this.vy *= frictionDt;
 
         const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
         if (speed > this.maxSpeed) {

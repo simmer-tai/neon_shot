@@ -9,15 +9,48 @@ export class Bullet {
         this.container = container;
 
         // オプションから特殊フラグを取得
-        this.isPiercing = options.isPiercing || false;
+        this.isPiercing = options.isPiercing || (options.piercingCount > 0) || false;
+        if (this.isPiercing) {
+            this.element.style.width = '40px';
+            this.element.style.height = '7px';
+        }
         this.isHoming = options.isHoming || false;
+        this.reflectCount = options.reflectCount || 0; // 残りバウンド回数
+        this.piercingCount = options.piercingCount || 0;
+
+        // トレイル用の過去座標履歴（最大10フレーム分）
+        this.trail = [];
+        this.trailMaxLength = 10;
+        this._trailTick = 0;
 
         this.element = document.createElement('div');
         this.element.className = 'bullet';
-        this.container.appendChild(this.element);
     }
 
-    update(enemies = [], deltaTime = 16.67) {
+    // DOMにappendしてアクティブ化（プール利用時）
+    activate(container) {
+        if (!this.element.parentNode) {
+            container.appendChild(this.element);
+        }
+    }
+
+    // 状態をリセットしてプールに戻す準備
+    reset(x, y, angle, speed, options = {}) {
+        this.x = x;
+        this.y = y;
+        this.angle = angle;
+        this.speed = speed;
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed;
+        this.isPiercing = options.isPiercing || (options.piercingCount > 0) || false;
+        this.isHoming = options.isHoming || false;
+        this.reflectCount = options.reflectCount || 0;
+        this.piercingCount = options.piercingCount || 0;
+        this.trail = [];
+        this._trailTick = 0;
+    }
+
+    update(enemies = [], deltaTime = 16.67, bounds = { width: 9999, height: 9999 }) {
         const dt = deltaTime / 16.67; // 60fps基準での係数
 
         // ホーミング処理
@@ -59,9 +92,31 @@ export class Bullet {
 
         this.x += this.vx * dt;
         this.y += this.vy * dt;
+
+        // バウンド処理（反射カード）
+        if (this.reflectCount > 0) {
+            if (this.x < 0 || this.x > bounds.width) {
+                this.vx *= -1;
+                this.reflectCount--;
+            }
+            if (this.y < 0 || this.y > bounds.height) {
+                this.vy *= -1;
+                this.reflectCount--;
+            }
+        }
+
+        // 1フレームおきにトレイル履歴を更新
+        this._trailTick++;
+        if (this._trailTick % 2 === 0) {
+            this.trail.push({ x: this.x, y: this.y });
+            if (this.trail.length > this.trailMaxLength) {
+                this.trail.shift();
+            }
+        }
     }
 
     isOffScreen(bounds) {
+        if (this.reflectCount > 0) return false;
         return (this.x < -100 || this.x > bounds.width + 100 || this.y < -100 || this.y > bounds.height + 100);
     }
 

@@ -2,6 +2,8 @@ import { Player } from './Player.js';
 import { Bullet } from './Bullet.js';
 import { Enemy } from './Enemy.js';
 import { CardSystem, CARDS, MAIN_CARDS } from './CardSystem.js';
+import { ParticleSystem } from './ParticleSystem.js';
+import { ImpactEffect } from './ImpactEffect.js';
 
 export class Game {
     constructor() {
@@ -24,8 +26,17 @@ export class Game {
         this.player = new Player();
         this.bullets = [];
         this.enemies = [];
+
+        // オブジェクトプール（DOM生成の削減）
+        this.bulletPool = [];
+        this.activeBullets = [];
+        this.particles = [];
+        this.impactEffects = [];
         this.bounds = { width: window.innerWidth, height: window.innerHeight };
         this.keys = { w: false, a: false, s: false, d: false };
+
+        // パーティクルシステムの初期化
+        this.particleSystem = new ParticleSystem(this.container);
 
         // ゲーム状態
         this.isGameOver = false;
@@ -54,6 +65,23 @@ export class Game {
         // フレームレート独立化
         this.lastTimestamp = null;
 
+        // マウス位置追跡（rAF同期用）
+        this.mouseX = window.innerWidth / 2;
+        this.mouseY = window.innerHeight / 2;
+
+        // UI更新の最適化用
+        this._lastHp = 3;
+        this._lastPhase = 'BATTLE';
+        this._lastTimeLeft = 60;
+
+        // トレイル描画用Canvas
+        this.trailCanvas = document.createElement('canvas');
+        this.trailCanvas.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;z-index:1;';
+        this.trailCanvas.width = window.innerWidth;
+        this.trailCanvas.height = window.innerHeight;
+        this.container.appendChild(this.trailCanvas);
+        this.trailCtx = this.trailCanvas.getContext('2d');
+
         this.init();
     }
 
@@ -75,13 +103,18 @@ export class Game {
         window.addEventListener('resize', () => {
             this.bounds.width = window.innerWidth;
             this.bounds.height = window.innerHeight;
+            this.trailCanvas.width = window.innerWidth;
+            this.trailCanvas.height = window.innerHeight;
+        });
+        // マウス座標を常に追跡（射撃はrAFループ内で処理）
+        window.addEventListener('mousemove', (e) => {
+            this.mouseX = e.clientX;
+            this.mouseY = e.clientY;
         });
         window.addEventListener('mousedown', (e) => {
             this.isMouseDown = true;
             if (this.isGameOver) {
                 this.restart();
-            } else if (!this.isBuildMode && this.phase === 'BATTLE') {
-                this.shoot(e.clientX, e.clientY);
             }
         });
         window.addEventListener('mouseup', () => {
@@ -96,6 +129,55 @@ export class Game {
         requestAnimationFrame((ts) => this.update(ts));
     }
 
+    spawnDeathParticles(x, y) {
+        const particleCount = Math.floor(Math.random() * 5) + 8; // 8〜12個
+        const colors = ['#ff0055', '#ff3377', '#ff6600', '#ff1144', '#ff4488'];
+
+        for (let i = 0; i < particleCount; i++) {
+            const angle = (Math.random() * Math.PI * 2);
+            const speed = Math.random() * 150 + 100; // 100〜250 px/s
+            const life = Math.random() * 200 + 400; // 400〜600ms
+            const color = colors[Math.floor(Math.random() * colors.length)];
+
+            const el = document.createElement('div');
+            el.className = 'death-particle';
+            el.style.backgroundColor = color;
+            el.style.boxShadow = `0 0 4px ${color}, 0 0 10px ${color}, 0 0 20px ${color}`;
+            this.container.appendChild(el);
+
+            this.particles.push({
+                el,
+                x,
+                y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                life,
+                maxLife: life,
+                color
+            });
+        }
+    }
+
+    getBullet(x, y, angle, speed, options = {}) {
+        let bullet;
+        if (this.bulletPool.length > 0) {
+            bullet = this.bulletPool.pop();
+            bullet.reset(x, y, angle, speed, options);
+            bullet.activate(this.container);
+        } else {
+            bullet = new Bullet(x, y, angle, this.container, speed, options);
+            bullet.activate(this.container);
+        }
+        return bullet;
+    }
+
+    returnBullet(bullet) {
+        if (bullet.element.parentNode) {
+            this.container.removeChild(bullet.element);
+        }
+        this.bulletPool.push(bullet);
+    }
+
     shoot(tx, ty) {
         const x = this.player.x;
         const y = this.player.y;
@@ -107,12 +189,18 @@ export class Game {
             if (now - this.lastFireTime < this.player.fireRate) return;
             this.lastFireTime = now;
 
-            this.bullets.push(new Bullet(x, y, angle, this.container, this.player.bulletSpeed));
+            this.bullets.push(this.getBullet(x, y, angle, this.player.bulletSpeed, {
+                isPiercing: this.player.piercingCount > 0,
+                reflectCount: this.player.reflectCount
+            }));
 
             // マルチショット判定
             if (Math.random() < this.player.multiShotChance) {
                 const spread = 0.2;
-                this.bullets.push(new Bullet(x, y, angle + spread, this.container, this.player.bulletSpeed));
+                this.bullets.push(this.getBullet(x, y, angle + spread, this.player.bulletSpeed, {
+                    isPiercing: this.player.piercingCount > 0,
+                    reflectCount: this.player.reflectCount
+                }));
             }
         } else if (this.equippedMainCard.id === 'shotgun') {
             // ショットガン: 5発扇状
@@ -124,7 +212,10 @@ export class Game {
             for (let i = -2; i <= 2; i++) {
                 const bulletAngle = angle + (i * spread);
                 const speed = this.player.bulletSpeed * 0.7;
-                this.bullets.push(new Bullet(x, y, bulletAngle, this.container, speed));
+                this.bullets.push(this.getBullet(x, y, bulletAngle, speed, {
+                    isPiercing: this.player.piercingCount > 0,
+                    reflectCount: this.player.reflectCount
+                }));
             }
         } else if (this.equippedMainCard.id === 'sniper') {
             // スナイパー: 貫通弾
@@ -133,7 +224,10 @@ export class Game {
             this.lastFireTime = now;
 
             const speed = this.player.bulletSpeed * 3;
-            this.bullets.push(new Bullet(x, y, angle, this.container, speed, { isPiercing: true }));
+            this.bullets.push(this.getBullet(x, y, angle, speed, {
+                isPiercing: true,
+                reflectCount: this.player.reflectCount
+            }));
         } else if (this.equippedMainCard.id === 'homing') {
             // ホーミング: 追尾弾
             const now = Date.now();
@@ -141,7 +235,11 @@ export class Game {
             this.lastFireTime = now;
 
             const speed = this.player.bulletSpeed * 1.2;
-            this.bullets.push(new Bullet(x, y, angle, this.container, speed, { isHoming: true }));
+            this.bullets.push(this.getBullet(x, y, angle, speed, {
+                isHoming: true,
+                isPiercing: this.player.piercingCount > 0,
+                reflectCount: this.player.reflectCount
+            }));
         }
     }
 
@@ -172,6 +270,18 @@ export class Game {
 
     // --- カードシステム関連 ---
 
+    resetAnimations(wrapper) {
+        requestAnimationFrame(() => {
+            const paths = wrapper.querySelectorAll('.path-a, .path-b, .path-a-inner, .path-b-inner, .card-fill, .card-content, .glow-path-a, .glow-path-b');
+            paths.forEach(p => {
+                p.style.animationName = 'none';
+                requestAnimationFrame(() => {
+                    p.style.animationName = '';
+                });
+            });
+        });
+    }
+
     showCardSelection() {
         // メインカード未選択の場合、メインカード選択フェーズを実行
         if (this.equippedMainCard === null) {
@@ -196,6 +306,11 @@ export class Game {
             const wrapper = this.createCardElement(card, { isMain: true, size: 'lg' });
             const cardEl = wrapper.querySelector('.card');
             wrapper.addEventListener('click', () => {
+                // すべてのカードのクリックを即座に無効化
+                this.cardCandidatesContainer.querySelectorAll('.card-wrapper').forEach(w => {
+                    w.style.pointerEvents = 'none';
+                });
+
                 // メインカード選択
                 this.equippedMainCard = card;
 
@@ -207,6 +322,7 @@ export class Game {
                     const otherWrapper = this.cardCandidatesContainer.children[i];
                     const otherCardEl = otherWrapper.querySelector('.card');
                     if (otherCardEl !== cardEl) {
+                        otherWrapper.classList.add('exit');
                         otherCardEl.classList.add('exit');
                     }
                 });
@@ -225,6 +341,7 @@ export class Game {
                 }, 1000);
             });
             this.cardCandidatesContainer.appendChild(wrapper);
+            this.resetAnimations(wrapper);
         });
 
         this.cardSelectionUI.classList.remove('hidden');
@@ -239,6 +356,11 @@ export class Game {
             const wrapper = this.createCardElement(card, { size: 'lg' });
             const cardEl = wrapper.querySelector('.card');
             wrapper.addEventListener('click', () => {
+                // すべてのカードのクリックを即座に無効化
+                this.cardCandidatesContainer.querySelectorAll('.card-wrapper').forEach(w => {
+                    w.style.pointerEvents = 'none';
+                });
+
                 // 選択アニメーション開始
                 this.inventory.push(card);
 
@@ -250,6 +372,7 @@ export class Game {
                     const otherWrapper = this.cardCandidatesContainer.children[i];
                     const otherCardEl = otherWrapper.querySelector('.card');
                     if (otherCardEl !== cardEl) {
+                        otherWrapper.classList.add('exit');
                         otherCardEl.classList.add('exit');
                     }
                 });
@@ -266,6 +389,7 @@ export class Game {
                 }, 1000);
             });
             this.cardCandidatesContainer.appendChild(wrapper);
+            this.resetAnimations(wrapper);
         });
 
         this.cardSelectionUI.classList.remove('hidden');
@@ -359,9 +483,46 @@ export class Game {
     openBuildUI() {
         this.buildUI.classList.remove('hidden');
         this.refreshBuildUI();
+        this.startBuildGridAnimation();
     }
 
     refreshBuildUI() {
+        // ── ステータスパネル更新 ──
+        const statusPanel = document.getElementById('status-panel');
+        if (statusPanel) {
+            const isSniper   = this.equippedMainCard?.id === 'sniper';
+            const isShotgun  = this.equippedMainCard?.id === 'shotgun';
+
+            const damage     = 1; // 将来拡張用固定値
+            const pierce     = isSniper  ? 5 : 1;
+            const multiShot  = isShotgun ? 1 : Math.round(this.player.multiShotChance * 100);
+            const multiUnit  = isShotgun ? '' : '%';
+
+            statusPanel.innerHTML = `
+                <div class="status-item">
+                    <span class="status-label">ダメージ</span>
+                    <span class="status-value">${damage}</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">弾速</span>
+                    <span class="status-value">${this.player.bulletSpeed.toFixed(1)}</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">発射間隔</span>
+                    <span class="status-value">${this.player.fireRate.toFixed(0)}<span class="status-unit">ms</span></span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">マルチショット</span>
+                    <span class="status-value">${multiShot}<span class="status-unit">${multiUnit}</span></span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">貫通</span>
+                    <span class="status-value">${pierce}</span>
+                </div>
+            `;
+        }
+
+        // ── 以下、既存コード ──
         if (!this.inventoryTitle) this.inventoryTitle = document.getElementById('inventory-title');
 
         const totalCards = this.inventory.length + this.equippedSlots.filter(s => s).length;
@@ -425,6 +586,7 @@ export class Game {
 
     closeBuildUI() {
         this.finishBuildBtn.classList.add('clicked');
+        this.stopBuildGridAnimation();
         setTimeout(() => {
             this.buildUI.classList.add('hidden');
             this.finishBuildBtn.classList.remove('clicked');
@@ -434,12 +596,102 @@ export class Game {
         }, 200);
     }
 
+    startBuildGridAnimation() {
+        const canvas = document.getElementById('build-grid-canvas');
+        const ctx = canvas.getContext('2d');
+        const GRID = 40;
+        const RADIUS = 180;
+        let mouseX = -9999;
+        let mouseY = -9999;
+        let animFrameId = null;
+
+        const resize = () => {
+            canvas.width = this.buildUI.offsetWidth;
+            canvas.height = this.buildUI.offsetHeight;
+        };
+        resize();
+
+        const onMouseMove = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+        };
+
+        const draw = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const cols = Math.ceil(canvas.width / GRID) + 1;
+            const rows = Math.ceil(canvas.height / GRID) + 1;
+
+            // 縦線
+            for (let i = 0; i <= cols; i++) {
+                const x = i * GRID;
+                const dx = Math.abs(x - mouseX);
+                if (dx >= RADIUS) continue;
+
+                const half = Math.sqrt(RADIUS * RADIUS - dx * dx);
+                const y0 = mouseY - half;
+                const y1 = mouseY + half;
+                const factor = Math.pow(1 - dx / RADIUS, 1.5);
+
+                ctx.save();
+                ctx.strokeStyle = `rgba(0, 255, 255, ${factor * 0.9})`;
+                ctx.lineWidth = 0.8;
+                ctx.shadowBlur = 0;
+                ctx.beginPath();
+                ctx.moveTo(x, y0);
+                ctx.lineTo(x, y1);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // 横線
+            for (let j = 0; j <= rows; j++) {
+                const y = j * GRID;
+                const dy = Math.abs(y - mouseY);
+                if (dy >= RADIUS) continue;
+
+                const half = Math.sqrt(RADIUS * RADIUS - dy * dy);
+                const x0 = mouseX - half;
+                const x1 = mouseX + half;
+                const factor = Math.pow(1 - dy / RADIUS, 1.5);
+
+                ctx.save();
+                ctx.strokeStyle = `rgba(0, 255, 255, ${factor * 0.9})`;
+                ctx.lineWidth = 0.8;
+                ctx.shadowBlur = 0;
+                ctx.beginPath();
+                ctx.moveTo(x0, y);
+                ctx.lineTo(x1, y);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            animFrameId = requestAnimationFrame(draw);
+        };
+
+        this.buildUI.addEventListener('mousemove', onMouseMove);
+        this._buildGridCleanup = () => {
+            cancelAnimationFrame(animFrameId);
+            this.buildUI.removeEventListener('mousemove', onMouseMove);
+        };
+        draw();
+    }
+
+    stopBuildGridAnimation() {
+        if (this._buildGridCleanup) {
+            this._buildGridCleanup();
+            this._buildGridCleanup = null;
+        }
+    }
+
     // --- メインループ ---
 
     update(timestamp = 0) {
         if (this.isGameOver) return;
         if (this.isBuildMode) {
             // ビルド中はゲーム内更新を停止するが、アニメーションループは維持
+            this.lastTimestamp = timestamp;
             requestAnimationFrame((ts) => this.update(ts));
             return;
         }
@@ -460,6 +712,11 @@ export class Game {
         // プレイヤー更新
         this.player.update(this.keys, this.bounds, deltaTime);
 
+        // マウスボタンが押されている場合、rAFループ内で射撃（レイアウトスラッシング削減）
+        if (this.isMouseDown && !this.isBuildMode && this.phase === 'BATTLE') {
+            this.shoot(this.mouseX, this.mouseY);
+        }
+
         // 敵の生成 (戦闘フェーズのみ)
         if (this.phase === 'BATTLE') {
             const currentInterval = Math.max(300, this.baseSpawnInterval - (this.difficultyLevel * 100));
@@ -472,12 +729,34 @@ export class Game {
             }
         }
 
+        // パーティクルシステムの更新
+        this.particleSystem.update(deltaTime);
+
+        // 既存パーティクルの更新（レガシー）
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const p = this.particles[i];
+            p.life -= deltaTime;
+
+            if (p.life <= 0) {
+                p.el.remove();
+                this.particles.splice(i, 1);
+            } else {
+                p.x += p.vx * deltaTime / 1000;
+                p.y += p.vy * deltaTime / 1000;
+                p.vy += 100 * deltaTime / 1000; // 重力効果
+
+                const alpha = p.life / p.maxLife;
+                p.el.style.transform = `translate(${p.x}px, ${p.y}px)`;
+                p.el.style.opacity = alpha;
+            }
+        }
+
         // 弾の更新
         for (let i = this.bullets.length - 1; i >= 0; i--) {
             const b = this.bullets[i];
-            b.update(this.enemies, deltaTime);
+            b.update(this.enemies, deltaTime, this.bounds);
             if (b.isOffScreen(this.bounds)) {
-                b.destroy();
+                this.returnBullet(b);
                 this.bullets.splice(i, 1);
             }
         }
@@ -496,10 +775,36 @@ export class Game {
                 const distSq = dx * dx + dy * dy;
                 const hitRadius = e.radius + 10;
                 if (distSq < hitRadius * hitRadius) {
+                    // 弾が飛んできた方向を計算
+                    const hitAngle = Math.atan2(b.vy, b.vx);
+                    this.particleSystem.spawnEnemyDeathParticles(e.x, e.y, hitAngle, this.container);
+
+                    // 着弾エフェクト生成
+                    let impactColor = '#00ffff';
+                    let impactScale = 1.5;
+                    let impactParticles = 5;
+
+                    if (b.isPiercing) {
+                        impactColor = '#ffffff';
+                        impactScale = 2.0;
+                        impactParticles = 6;
+                    } else if (b.isHoming) {
+                        impactColor = '#ff00ff';
+                        impactScale = 1.5;
+                    } else if (this.equippedMainCard?.id === 'shotgun') {
+                        impactScale = 0.65;
+                    }
+
+                    this.impactEffects.push(new ImpactEffect(b.x, b.y, this.container, {
+                        color: impactColor,
+                        scale: impactScale,
+                        particleCount: impactParticles
+                    }));
+
                     e.destroy();
                     this.enemies.splice(i, 1);
                     if (!b.isPiercing) {
-                        b.destroy();
+                        this.returnBullet(b);
                         this.bullets.splice(j, 1);
                     }
                     this.killCount++;
@@ -516,6 +821,9 @@ export class Game {
             const distSq = dx * dx + dy * dy;
             const hitRadius = e.radius + this.player.radius;
             if (distSq < hitRadius * hitRadius) {
+                // 敵がプレイヤーから遠ざかる方向にパーティクルを飛ばす
+                const hitAngle = Math.atan2(dy, dx);
+                this.particleSystem.spawnEnemyDeathParticles(e.x, e.y, hitAngle, this.container);
                 if (this.player.takeDamage()) {
                     if (this.player.hp <= 0) {
                         this.gameOver();
@@ -526,15 +834,35 @@ export class Game {
             }
         }
 
+        // 着弾エフェクトの更新
+        for (let i = this.impactEffects.length - 1; i >= 0; i--) {
+            const done = this.impactEffects[i].update(deltaTime);
+            if (done) {
+                this.impactEffects[i].destroy();
+                this.impactEffects.splice(i, 1);
+            }
+        }
+
         this.updateUI();
         this.draw();
         requestAnimationFrame((ts) => this.update(ts));
     }
 
     updateUI() {
-        this.hpUI.textContent = `HP: ${this.player.hp}`;
-        this.phaseNameUI.textContent = this.phase === 'BATTLE' ? 'BATTLE PHASE' : 'SAFE ZONE';
-        this.phaseTimerUI.textContent = `${Math.ceil(this.phaseTimeLeft)}s`;
+        if (this.player.hp !== this._lastHp) {
+            this.hpUI.textContent = `HP: ${this.player.hp}`;
+            this._lastHp = this.player.hp;
+        }
+        const newPhase = this.phase === 'BATTLE' ? 'BATTLE PHASE' : 'SAFE ZONE';
+        if (newPhase !== this._lastPhase) {
+            this.phaseNameUI.textContent = newPhase;
+            this._lastPhase = newPhase;
+        }
+        const newTime = Math.ceil(this.phaseTimeLeft);
+        if (newTime !== this._lastTimeLeft) {
+            this.phaseTimerUI.textContent = `${newTime}s`;
+            this._lastTimeLeft = newTime;
+        }
     }
 
     gameOver() {
@@ -548,10 +876,16 @@ export class Game {
         this.player.reset(this.bounds);
 
         // 残っている弾と敵を消去
-        this.bullets.forEach(b => b.destroy());
+        this.bullets.forEach(b => this.returnBullet(b));
         this.enemies.forEach(e => e.destroy());
+        this.particles.forEach(p => p.el.remove());
+        this.particleSystem.clear();
+        this.impactEffects.forEach(e => e.destroy());
         this.bullets = [];
         this.enemies = [];
+        this.particles = [];
+        this.impactEffects = [];
+        this.trailCtx.clearRect(0, 0, this.trailCanvas.width, this.trailCanvas.height);
 
         this.killCount = 0;
         this.startTime = Date.now();
@@ -582,5 +916,53 @@ export class Game {
         this.player.draw();
         this.bullets.forEach(b => b.draw());
         this.enemies.forEach(e => e.draw());
+        this.drawTrails();
+    }
+
+    drawTrails() {
+        const ctx = this.trailCtx;
+        ctx.clearRect(0, 0, this.trailCanvas.width, this.trailCanvas.height);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        for (const b of this.bullets) {
+            const trail = b.trail;
+            if (!trail || trail.length < 2) continue;
+
+            const head = trail[trail.length - 1];
+            const tail = trail[0];
+
+            // トレイル全体にグラデーションをかける
+            const grad = ctx.createLinearGradient(tail.x, tail.y, head.x, head.y);
+            grad.addColorStop(0, 'rgba(0, 255, 255, 0)');      // 尾: 透明
+            grad.addColorStop(0.5, 'rgba(0, 255, 255, 0.15)'); // 中間
+            grad.addColorStop(1, 'rgba(0, 255, 255, 0.9)');    // 弾頭直後: 高輝度
+
+            // 共通パスを1回だけ構築
+            const path = new Path2D();
+            path.moveTo(trail[0].x, trail[0].y);
+            for (let i = 1; i < trail.length; i++) {
+                path.lineTo(trail[i].x, trail[i].y);
+            }
+
+            // 層1: 一番外側の広がったグロー
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = 10;
+            ctx.globalAlpha = 0.18;
+            ctx.stroke(path);
+
+            // 層2: 中間グロー
+            ctx.lineWidth = 5;
+            ctx.globalAlpha = 0.4;
+            ctx.stroke(path);
+
+            // 層3: コア（細くて明るい）
+            ctx.lineWidth = 1.5;
+            ctx.globalAlpha = 1.0;
+            ctx.stroke(path);
+        }
+
+        // globalAlphaをリセット
+        ctx.globalAlpha = 1.0;
     }
 }
