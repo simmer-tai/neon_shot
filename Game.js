@@ -738,16 +738,26 @@ export class Game {
                     this.particleSystem.spawnEnemyDeathParticles(e.x, e.y, hitAngle, this.container);
 
                     // 着弾エフェクト生成
-                    if (b.isHoming) {
-                        // ホーミング弾：マゼンタ
-                        this.impactEffects.push(new ImpactEffect(b.x, b.y, this.container, { color: '#ff00ff' }));
-                    } else if (b.isPiercing) {
-                        // 貫通弾：白
-                        this.impactEffects.push(new ImpactEffect(b.x, b.y, this.container, { color: '#ffffff', scale: 1.5, particleCount: 6 }));
-                    } else {
-                        // 通常弾：シアン
-                        this.impactEffects.push(new ImpactEffect(b.x, b.y, this.container));
+                    let impactColor = '#00ffff';
+                    let impactScale = 1.5;
+                    let impactParticles = 5;
+
+                    if (b.isPiercing) {
+                        impactColor = '#ffffff';
+                        impactScale = 2.0;
+                        impactParticles = 6;
+                    } else if (b.isHoming) {
+                        impactColor = '#ff00ff';
+                        impactScale = 1.5;
+                    } else if (this.equippedMainCard?.id === 'shotgun') {
+                        impactScale = 0.65;
                     }
+
+                    this.impactEffects.push(new ImpactEffect(b.x, b.y, this.container, {
+                        color: impactColor,
+                        scale: impactScale,
+                        particleCount: impactParticles
+                    }));
 
                     e.destroy();
                     this.enemies.splice(i, 1);
