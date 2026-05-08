@@ -425,6 +425,7 @@ export class Game {
     openBuildUI() {
         this.buildUI.classList.remove('hidden');
         this.refreshBuildUI();
+        this.startBuildGridAnimation();
     }
 
     refreshBuildUI() {
@@ -491,6 +492,7 @@ export class Game {
 
     closeBuildUI() {
         this.finishBuildBtn.classList.add('clicked');
+        this.stopBuildGridAnimation();
         setTimeout(() => {
             this.buildUI.classList.add('hidden');
             this.finishBuildBtn.classList.remove('clicked');
@@ -498,6 +500,95 @@ export class Game {
             // ステータス反映
             this.player.applyBuild(this.equippedSlots);
         }, 200);
+    }
+
+    startBuildGridAnimation() {
+        const canvas = document.getElementById('build-grid-canvas');
+        const ctx = canvas.getContext('2d');
+        const GRID = 40;
+        const RADIUS = 180;
+        let mouseX = -9999;
+        let mouseY = -9999;
+        let animFrameId = null;
+
+        const resize = () => {
+            canvas.width = this.buildUI.offsetWidth;
+            canvas.height = this.buildUI.offsetHeight;
+        };
+        resize();
+
+        const onMouseMove = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+        };
+
+        const draw = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const cols = Math.ceil(canvas.width / GRID) + 1;
+            const rows = Math.ceil(canvas.height / GRID) + 1;
+
+            // 縦線
+            for (let i = 0; i <= cols; i++) {
+                const x = i * GRID;
+                const dx = Math.abs(x - mouseX);
+                if (dx >= RADIUS) continue;
+
+                const half = Math.sqrt(RADIUS * RADIUS - dx * dx);
+                const y0 = mouseY - half;
+                const y1 = mouseY + half;
+                const factor = Math.pow(1 - dx / RADIUS, 1.5);
+
+                ctx.save();
+                ctx.strokeStyle = `rgba(0, 255, 255, ${factor * 0.9})`;
+                ctx.lineWidth = 0.8;
+                ctx.shadowBlur = 0;
+                ctx.beginPath();
+                ctx.moveTo(x, y0);
+                ctx.lineTo(x, y1);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // 横線
+            for (let j = 0; j <= rows; j++) {
+                const y = j * GRID;
+                const dy = Math.abs(y - mouseY);
+                if (dy >= RADIUS) continue;
+
+                const half = Math.sqrt(RADIUS * RADIUS - dy * dy);
+                const x0 = mouseX - half;
+                const x1 = mouseX + half;
+                const factor = Math.pow(1 - dy / RADIUS, 1.5);
+
+                ctx.save();
+                ctx.strokeStyle = `rgba(0, 255, 255, ${factor * 0.9})`;
+                ctx.lineWidth = 0.8;
+                ctx.shadowBlur = 0;
+                ctx.beginPath();
+                ctx.moveTo(x0, y);
+                ctx.lineTo(x1, y);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            animFrameId = requestAnimationFrame(draw);
+        };
+
+        this.buildUI.addEventListener('mousemove', onMouseMove);
+        this._buildGridCleanup = () => {
+            cancelAnimationFrame(animFrameId);
+            this.buildUI.removeEventListener('mousemove', onMouseMove);
+        };
+        draw();
+    }
+
+    stopBuildGridAnimation() {
+        if (this._buildGridCleanup) {
+            this._buildGridCleanup();
+            this._buildGridCleanup = null;
+        }
     }
 
     // --- メインループ ---

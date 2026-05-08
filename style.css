@@ -221,11 +221,24 @@ body.safe-zone {
 }
 
 #build-ui {
-    background-image: 
-        linear-gradient(rgba(0, 255, 255, 0.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0, 255, 255, 0.05) 1px, transparent 1px);
-    background-size: 30px 30px;
+    background-image: none;
     animation: buildUIEntry 0.4s ease-out forwards;
+    position: relative;
+}
+
+#build-grid-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+}
+
+#build-ui > *:not(#build-grid-canvas) {
+    position: relative;
+    z-index: 1;
 }
 
 @keyframes buildUIEntry {
@@ -317,7 +330,7 @@ body.safe-zone {
 
 .card {
     position: relative;
-    background-color: transparent;
+    background-color: #0a0a1a;
     cursor: pointer;
     box-sizing: border-box;
     display: flex;
@@ -536,12 +549,14 @@ body.safe-zone {
 .slot {
     width: 160px;
     height: 210px;
-    border: 2px dashed #00ffff44;
+    border: 2px dashed #00ffff99;
+    background-color: #0a0a1a;
     position: relative;
     display: flex;
     justify-content: center;
     align-items: center;
     transition: all 0.3s ease;
+    overflow: hidden;
 }
 
 .slot:empty::after {
@@ -626,6 +641,16 @@ body.safe-zone {
     width: 100%;
     height: 100%;
     font-size: inherit;
+}
+
+.slot .card-wrapper {
+    width: 100%;
+    height: 100%;
+}
+
+.slot .card--md {
+    width: 100%;
+    height: 100%;
 }
 
 
