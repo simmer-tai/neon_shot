@@ -24,6 +24,7 @@ export class Game {
         this.player = new Player();
         this.bullets = [];
         this.enemies = [];
+        this.particles = [];
         this.bounds = { width: window.innerWidth, height: window.innerHeight };
         this.keys = { w: false, a: false, s: false, d: false };
 
@@ -54,6 +55,14 @@ export class Game {
         // フレームレート独立化
         this.lastTimestamp = null;
 
+        // トレイル描画用Canvas
+        this.trailCanvas = document.createElement('canvas');
+        this.trailCanvas.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;z-index:1;';
+        this.trailCanvas.width = window.innerWidth;
+        this.trailCanvas.height = window.innerHeight;
+        this.container.appendChild(this.trailCanvas);
+        this.trailCtx = this.trailCanvas.getContext('2d');
+
         this.init();
     }
 
@@ -75,6 +84,8 @@ export class Game {
         window.addEventListener('resize', () => {
             this.bounds.width = window.innerWidth;
             this.bounds.height = window.innerHeight;
+            this.trailCanvas.width = window.innerWidth;
+            this.trailCanvas.height = window.innerHeight;
         });
         window.addEventListener('mousedown', (e) => {
             this.isMouseDown = true;
@@ -94,6 +105,35 @@ export class Game {
 
         // ループ開始
         requestAnimationFrame((ts) => this.update(ts));
+    }
+
+    spawnDeathParticles(x, y) {
+        const particleCount = Math.floor(Math.random() * 5) + 8; // 8〜12個
+        const colors = ['#ff0055', '#ff3377', '#ff6600', '#ff1144', '#ff4488'];
+
+        for (let i = 0; i < particleCount; i++) {
+            const angle = (Math.random() * Math.PI * 2);
+            const speed = Math.random() * 150 + 100; // 100〜250 px/s
+            const life = Math.random() * 200 + 400; // 400〜600ms
+            const color = colors[Math.floor(Math.random() * colors.length)];
+
+            const el = document.createElement('div');
+            el.className = 'death-particle';
+            el.style.backgroundColor = color;
+            el.style.boxShadow = `0 0 4px ${color}, 0 0 10px ${color}, 0 0 20px ${color}`;
+            this.container.appendChild(el);
+
+            this.particles.push({
+                el,
+                x,
+                y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                life,
+                maxLife: life,
+                color
+            });
+        }
     }
 
     shoot(tx, ty) {
@@ -472,6 +512,25 @@ export class Game {
             }
         }
 
+        // パーティクルの更新
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const p = this.particles[i];
+            p.life -= deltaTime;
+
+            if (p.life <= 0) {
+                p.el.remove();
+                this.particles.splice(i, 1);
+            } else {
+                p.x += p.vx * deltaTime / 1000;
+                p.y += p.vy * deltaTime / 1000;
+                p.vy += 100 * deltaTime / 1000; // 重力効果
+
+                const alpha = p.life / p.maxLife;
+                p.el.style.transform = `translate(${p.x}px, ${p.y}px)`;
+                p.el.style.opacity = alpha;
+            }
+        }
+
         // 弾の更新
         for (let i = this.bullets.length - 1; i >= 0; i--) {
             const b = this.bullets[i];
@@ -496,6 +555,7 @@ export class Game {
                 const distSq = dx * dx + dy * dy;
                 const hitRadius = e.radius + 10;
                 if (distSq < hitRadius * hitRadius) {
+                    this.spawnDeathParticles(e.x, e.y);
                     e.destroy();
                     this.enemies.splice(i, 1);
                     if (!b.isPiercing) {
@@ -516,6 +576,7 @@ export class Game {
             const distSq = dx * dx + dy * dy;
             const hitRadius = e.radius + this.player.radius;
             if (distSq < hitRadius * hitRadius) {
+                this.spawnDeathParticles(e.x, e.y);
                 if (this.player.takeDamage()) {
                     if (this.player.hp <= 0) {
                         this.gameOver();
@@ -550,8 +611,11 @@ export class Game {
         // 残っている弾と敵を消去
         this.bullets.forEach(b => b.destroy());
         this.enemies.forEach(e => e.destroy());
+        this.particles.forEach(p => p.el.remove());
         this.bullets = [];
         this.enemies = [];
+        this.particles = [];
+        this.trailCtx.clearRect(0, 0, this.trailCanvas.width, this.trailCanvas.height);
 
         this.killCount = 0;
         this.startTime = Date.now();
@@ -582,5 +646,53 @@ export class Game {
         this.player.draw();
         this.bullets.forEach(b => b.draw());
         this.enemies.forEach(e => e.draw());
+        this.drawTrails();
+    }
+
+    drawTrails() {
+        const ctx = this.trailCtx;
+        ctx.clearRect(0, 0, this.trailCanvas.width, this.trailCanvas.height);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        for (const b of this.bullets) {
+            const trail = b.trail;
+            if (!trail || trail.length < 2) continue;
+
+            const head = trail[trail.length - 1];
+            const tail = trail[0];
+
+            // トレイル全体にグラデーションをかける
+            const grad = ctx.createLinearGradient(tail.x, tail.y, head.x, head.y);
+            grad.addColorStop(0, 'rgba(0, 255, 255, 0)');      // 尾: 透明
+            grad.addColorStop(0.5, 'rgba(0, 255, 255, 0.15)'); // 中間
+            grad.addColorStop(1, 'rgba(0, 255, 255, 0.9)');    // 弾頭直後: 高輝度
+
+            // 共通パスを1回だけ構築
+            const path = new Path2D();
+            path.moveTo(trail[0].x, trail[0].y);
+            for (let i = 1; i < trail.length; i++) {
+                path.lineTo(trail[i].x, trail[i].y);
+            }
+
+            // 層1: 一番外側の広がったグロー
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = 10;
+            ctx.globalAlpha = 0.18;
+            ctx.stroke(path);
+
+            // 層2: 中間グロー
+            ctx.lineWidth = 5;
+            ctx.globalAlpha = 0.4;
+            ctx.stroke(path);
+
+            // 層3: コア（細くて明るい）
+            ctx.lineWidth = 1.5;
+            ctx.globalAlpha = 1.0;
+            ctx.stroke(path);
+        }
+
+        // globalAlphaをリセット
+        ctx.globalAlpha = 1.0;
     }
 }

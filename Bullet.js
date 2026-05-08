@@ -12,6 +12,11 @@ export class Bullet {
         this.isPiercing = options.isPiercing || false;
         this.isHoming = options.isHoming || false;
 
+        // トレイル用の過去座標履歴（最大10フレーム分）
+        this.trail = [];
+        this.trailMaxLength = 10;
+        this._trailTick = 0;
+
         this.element = document.createElement('div');
         this.element.className = 'bullet';
         this.container.appendChild(this.element);
@@ -59,6 +64,15 @@ export class Bullet {
 
         this.x += this.vx * dt;
         this.y += this.vy * dt;
+
+        // 1フレームおきにトレイル履歴を更新
+        this._trailTick++;
+        if (this._trailTick % 2 === 0) {
+            this.trail.push({ x: this.x, y: this.y });
+            if (this.trail.length > this.trailMaxLength) {
+                this.trail.shift();
+            }
+        }
     }
 
     isOffScreen(bounds) {

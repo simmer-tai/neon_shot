@@ -64,6 +64,17 @@ body, html {
     /* 四角形の敵 */
 }
 
+.death-particle {
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background-color: #ff0055;
+    pointer-events: none;
+    will-change: transform, opacity;
+    filter: blur(0.8px);
+}
+
 /* --- 追加UIスタイル --- */
 
 #ui-layer {
