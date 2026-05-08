@@ -3,6 +3,7 @@ import { Bullet } from './Bullet.js';
 import { Enemy } from './Enemy.js';
 import { CardSystem, CARDS, MAIN_CARDS } from './CardSystem.js';
 import { ParticleSystem } from './ParticleSystem.js';
+import { ImpactEffect } from './ImpactEffect.js';
 
 export class Game {
     constructor() {
@@ -26,6 +27,7 @@ export class Game {
         this.bullets = [];
         this.enemies = [];
         this.particles = [];
+        this.impactEffects = [];
         this.bounds = { width: window.innerWidth, height: window.innerHeight };
         this.keys = { w: false, a: false, s: false, d: false };
 
@@ -734,6 +736,19 @@ export class Game {
                     // 弾が飛んできた方向を計算
                     const hitAngle = Math.atan2(b.vy, b.vx);
                     this.particleSystem.spawnEnemyDeathParticles(e.x, e.y, hitAngle, this.container);
+
+                    // 着弾エフェクト生成
+                    if (b.isHoming) {
+                        // ホーミング弾：マゼンタ
+                        this.impactEffects.push(new ImpactEffect(b.x, b.y, this.container, { color: '#ff00ff' }));
+                    } else if (b.isPiercing) {
+                        // 貫通弾：白
+                        this.impactEffects.push(new ImpactEffect(b.x, b.y, this.container, { color: '#ffffff', scale: 1.5, particleCount: 6 }));
+                    } else {
+                        // 通常弾：シアン
+                        this.impactEffects.push(new ImpactEffect(b.x, b.y, this.container));
+                    }
+
                     e.destroy();
                     this.enemies.splice(i, 1);
                     if (!b.isPiercing) {
@@ -767,6 +782,15 @@ export class Game {
             }
         }
 
+        // 着弾エフェクトの更新
+        for (let i = this.impactEffects.length - 1; i >= 0; i--) {
+            const done = this.impactEffects[i].update(deltaTime);
+            if (done) {
+                this.impactEffects[i].destroy();
+                this.impactEffects.splice(i, 1);
+            }
+        }
+
         this.updateUI();
         this.draw();
         requestAnimationFrame((ts) => this.update(ts));
@@ -793,9 +817,11 @@ export class Game {
         this.enemies.forEach(e => e.destroy());
         this.particles.forEach(p => p.el.remove());
         this.particleSystem.clear();
+        this.impactEffects.forEach(e => e.destroy());
         this.bullets = [];
         this.enemies = [];
         this.particles = [];
+        this.impactEffects = [];
         this.trailCtx.clearRect(0, 0, this.trailCanvas.width, this.trailCanvas.height);
 
         this.killCount = 0;

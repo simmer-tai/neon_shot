@@ -891,3 +891,53 @@ body.safe-zone {
     opacity: 0.9;
 }
 
+/* 着弾エフェクト */
+.impact-effect {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+    will-change: transform, opacity;
+}
+
+/* 中央のリングフラッシュ */
+.impact-effect::before {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid var(--impact-color);
+    transform: translate(-50%, -50%) scale(0);
+    animation: impact-ring 0.3s ease-out forwards;
+    box-shadow: 0 0 6px var(--impact-color), 0 0 12px var(--impact-color);
+}
+
+@keyframes impact-ring {
+    0%   { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+}
+
+/* 放射パーティクル */
+.impact-particle {
+    position: absolute;
+    width: 8px;
+    height: 2px;
+    background: var(--impact-color);
+    border-radius: 1px;
+    top: 0;
+    left: 0;
+    transform-origin: left center;
+    transform: translate(-1px, -1px) rotate(var(--angle));
+    box-shadow: 0 0 4px var(--impact-color);
+    animation: impact-particle-fly 0.25s ease-out forwards;
+}
+
+@keyframes impact-particle-fly {
+    0%   { transform: translate(-1px, -1px) rotate(var(--angle)) scaleX(0); opacity: 1; }
+    40%  { opacity: 1; }
+    100% { transform: translate(-1px, -1px) rotate(var(--angle)) translateX(18px) scaleX(0.3); opacity: 0; }
+}
+
