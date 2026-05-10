@@ -35,6 +35,22 @@ export const CARDS = {
         effectValue: 0.20,
         color: '#00ff00',
         type: 'sub'
+    },
+    reflect: {
+        id: 'reflect',
+        name: '反射',
+        description: '弾が画面端を1回バウンドする',
+        effectValue: 1,
+        color: '#00ffff',
+        type: 'sub'
+    },
+    piercing: {
+        id: 'piercing',
+        name: '貫通',
+        description: '弾が敵を貫通する',
+        effectValue: 1,
+        color: '#00ffff',
+        type: 'sub'
     }
 };
 

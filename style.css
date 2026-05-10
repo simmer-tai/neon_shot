@@ -64,6 +64,31 @@ body, html {
     /* 四角形の敵 */
 }
 
+.death-particle {
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background-color: #ff0055;
+    pointer-events: none;
+    will-change: transform, opacity;
+    filter: blur(0.8px);
+}
+
+.particle-square {
+    position: absolute;
+    border-radius: 0;
+    border: 3px solid #ff0055;
+    background-color: transparent;
+    box-shadow: 0 0 6px #ff0055, 0 0 12px #ff0055, 0 0 24px #ff0055;
+    filter: blur(0.5px);
+    pointer-events: none;
+    will-change: transform;
+    opacity: 1;
+    top: 0;
+    left: 0;
+}
+
 /* --- 追加UIスタイル --- */
 
 #ui-layer {
@@ -210,11 +235,24 @@ body.safe-zone {
 }
 
 #build-ui {
-    background-image: 
-        linear-gradient(rgba(0, 255, 255, 0.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0, 255, 255, 0.05) 1px, transparent 1px);
-    background-size: 30px 30px;
+    background-image: none;
     animation: buildUIEntry 0.4s ease-out forwards;
+    position: relative;
+}
+
+#build-grid-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+}
+
+#build-ui > *:not(#build-grid-canvas) {
+    position: relative;
+    z-index: 1;
 }
 
 @keyframes buildUIEntry {
@@ -283,10 +321,15 @@ body.safe-zone {
 /* ホバー時にグローを強化 */
 .card-wrapper:hover .glow-path-a,
 .card-wrapper:hover .glow-path-b {
-    filter: drop-shadow(0 0 8px currentColor)
-            drop-shadow(0 0 20px currentColor)
-            drop-shadow(0 0 40px currentColor)
-            drop-shadow(0 0 60px currentColor);
+    filter: drop-shadow(0 0 6px currentColor)
+            drop-shadow(0 0 14px currentColor)
+            drop-shadow(0 0 28px currentColor);
+}
+
+/* 退出時にグロー専用レイヤーも消す */
+.card-wrapper.exit .glow-path-a,
+.card-wrapper.exit .glow-path-b {
+    animation: erase-path 0.3s ease-out forwards;
 }
 
 #card-candidates {
@@ -301,7 +344,7 @@ body.safe-zone {
 
 .card {
     position: relative;
-    background-color: transparent;
+    background-color: #0a0a1a;
     cursor: pointer;
     box-sizing: border-box;
     display: flex;
@@ -377,11 +420,19 @@ body.safe-zone {
     stroke-width: 1px;
     stroke-dasharray: 1000;
     stroke-dashoffset: 1000;
-    transition: stroke-dashoffset 0.2s ease-in-out;
+    transition: stroke-dashoffset 0.6s ease-in-out,
+                filter 0.1s ease,
+                opacity 0.1s ease;
     opacity: 0.7;
 }
 
 .card:hover .path-a-inner, .card:hover .path-b-inner {
+    stroke-dashoffset: 0;
+}
+
+/* カード選択画面・ビルド画面両方で確実に効くよう特異度を上げる */
+.card-wrapper:hover .path-a-inner,
+.card-wrapper:hover .path-b-inner {
     stroke-dashoffset: 0;
 }
 
@@ -448,6 +499,12 @@ body.safe-zone {
     animation: erase-path 0.3s ease-out forwards;
 }
 
+.card.exit .path-a-inner,
+.card.exit .path-b-inner {
+    stroke-dashoffset: 1000;
+    transition: stroke-dashoffset 0.2s ease-out;
+}
+
 .card.exit .card-fill {
     animation: fill-swipe-out 0.3s ease-in-out forwards;
 }
@@ -460,52 +517,111 @@ body.safe-zone {
 
 /* ビルド画面用スタイル */
 #build-ui h2 {
-    font-size: 28px;
-    letter-spacing: 6px;
-    color: #00ffff;
-    text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff;
-    margin-bottom: 30px;
+    display: none;
 }
 
 .build-layout {
     display: flex;
-    width: 90%;
-    max-width: 1000px;
-    height: 550px;
-    gap: 30px;
+    width: 92%;
+    max-width: 1100px;
+    height: 600px;
+    gap: 0;
     align-items: stretch;
 }
 
-.build-left {
-    flex: 0 0 60%;
+.build-status {
+    flex: 0 0 220px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    padding: 10px 24px 10px 10px;
 }
 
-.build-right {
+.build-main {
     flex: 1;
     display: flex;
     flex-direction: column;
+    padding: 10px 10px 10px 24px;
+}
+
+.build-slots-area {
+    flex: 0 0 auto;
+}
+
+.build-inventory-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.build-divider-h {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(to right, transparent, #00ffff33, transparent);
+    margin: 16px 0;
+}
+
+.build-section-title {
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: #00ffff66;
+    margin: 0 0 14px 0;
+    font-weight: normal;
+}
+
+/* ステータスパネル */
+#status-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.status-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+#status-panel {
+    gap: 22px;
+}
+
+.status-label {
+    font-size: 14px;
+    letter-spacing: 1px;
+    color: #00ffff88;
+}
+
+.status-value {
+    font-size: 22px;
+    font-weight: bold;
+    color: #00ffff;
+    text-shadow: 0 0 8px #00ffff;
+    line-height: 1;
+}
+
+.status-unit {
+    font-size: 12px;
+    color: #00ffff66;
+    margin-left: 3px;
 }
 
 .vertical-divider {
     width: 1px;
     background: linear-gradient(to bottom, transparent, #00ffff33, transparent);
-    border-right: 1px solid #00ffff33;
 }
 
 #slot-container {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
-    gap: 20px;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: 1fr;
+    gap: 14px;
     justify-items: center;
 }
 
 .slot {
-    width: 160px;
-    height: 210px;
+    width: 140px;
+    height: 190px;
     border: 2px dashed #00ffff44;
     position: relative;
     display: flex;
@@ -528,18 +644,22 @@ body.safe-zone {
 }
 
 #inventory-title {
-    font-size: 16px;
-    color: #00ffff;
-    margin-bottom: 15px;
-    letter-spacing: 2px;
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: #00ffff66;
+    margin: 0 0 14px 0;
+    font-weight: normal;
 }
 
 #inventory-container {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 10px;
     justify-content: flex-start;
     align-content: flex-start;
+    overflow-y: auto;
+    max-height: 180px;
+    padding-right: 4px;
 }
 
 /* ビルド画面内カード共通デザイン */
@@ -596,6 +716,16 @@ body.safe-zone {
     width: 100%;
     height: 100%;
     font-size: inherit;
+}
+
+.slot .card-wrapper {
+    width: 100%;
+    height: 100%;
+}
+
+.slot .card--md {
+    width: 100%;
+    height: 100%;
 }
 
 
@@ -759,5 +889,55 @@ body.safe-zone {
     filter: drop-shadow(0 0 3px currentColor)
             drop-shadow(0 0 8px currentColor);
     opacity: 0.9;
+}
+
+/* 着弾エフェクト */
+.impact-effect {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+    will-change: transform, opacity;
+}
+
+/* 中央のリングフラッシュ */
+.impact-effect::before {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid var(--impact-color);
+    transform: translate(-50%, -50%) scale(0);
+    animation: impact-ring 0.3s ease-out forwards;
+    box-shadow: 0 0 6px var(--impact-color), 0 0 12px var(--impact-color);
+}
+
+@keyframes impact-ring {
+    0%   { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+}
+
+/* 放射パーティクル */
+.impact-particle {
+    position: absolute;
+    width: 8px;
+    height: 2px;
+    background: var(--impact-color);
+    border-radius: 1px;
+    top: 0;
+    left: 0;
+    transform-origin: left center;
+    transform: translate(-1px, -1px) rotate(var(--angle));
+    box-shadow: 0 0 4px var(--impact-color);
+    animation: impact-particle-fly 0.25s ease-out forwards;
+}
+
+@keyframes impact-particle-fly {
+    0%   { transform: translate(-1px, -1px) rotate(var(--angle)) scaleX(0); opacity: 1; }
+    40%  { opacity: 1; }
+    100% { transform: translate(-1px, -1px) rotate(var(--angle)) translateX(18px) scaleX(0.3); opacity: 0; }
 }
 

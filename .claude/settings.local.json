@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//h/マイドライブ/P共有フォルダー/ゲーム開発/neon_shot/.claude/worktrees/**)",
+      "Bash(python -m http.server 8000)",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "Bash(node -c CardSystem.js)",
+      "Bash(node -c Bullet.js)",
+      "Bash(node -c Game.js)"
+    ]
+  }
+}
