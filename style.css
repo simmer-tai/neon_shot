@@ -55,13 +55,57 @@ body, html {
 
 .enemy {
     position: absolute;
-    width: 30px;
-    height: 30px;
-    border: 3px solid #ff0055; /* 赤系統のネオン */
-    background-color: transparent;
-    box-shadow: 0 0 10px #ff0055, inset 0 0 5px #ff0055;
+    width: 28px;
+    height: 28px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
     will-change: transform;
-    /* 四角形の敵 */
+    pointer-events: none;
+}
+
+/* 外側の正方形 */
+.enemy::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 2.5px solid #ff0055;
+    box-sizing: border-box;
+    box-shadow:
+        0 0 6px #ff0055,
+        0 0 14px #ff0055,
+        0 0 28px #ff0055,
+        inset 0 0 6px #ff005533;
+}
+
+/* 内側の小さい正方形 */
+.enemy::after {
+    content: '';
+    position: absolute;
+    top: 25%;
+    left: 25%;
+    width: 50%;
+    height: 50%;
+    background: #ff005522;
+    border: 1.5px solid #ff005599;
+    box-sizing: border-box;
+    box-shadow:
+        0 0 4px #ff0055,
+        0 0 10px #ff0055;
+    animation: enemy-spin-reverse 2.5s linear infinite;
+}
+
+@keyframes enemy-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
+@keyframes enemy-spin-reverse {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(-360deg); }
 }
 
 .death-particle {

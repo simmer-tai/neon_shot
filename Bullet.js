@@ -20,7 +20,7 @@ export class Bullet {
 
         // トレイル用の過去座標履歴（最大10フレーム分）
         this.trail = [];
-        this.trailMaxLength = 10;
+        this.trailMaxDuration = 167; // ms換算（60Hzの10フレーム相当）
         this._trailTick = 0;
 
         this.element = document.createElement('div');
@@ -106,12 +106,10 @@ export class Bullet {
         }
 
         // 1フレームおきにトレイル履歴を更新
-        this._trailTick++;
-        if (this._trailTick % 2 === 0) {
-            this.trail.push({ x: this.x, y: this.y });
-            if (this.trail.length > this.trailMaxLength) {
-                this.trail.shift();
-            }
+        this.trail.push({ x: this.x, y: this.y, t: performance.now() });
+        const cutoff = performance.now() - this.trailMaxDuration;
+        while (this.trail.length > 0 && this.trail[0].t < cutoff) {
+            this.trail.shift();
         }
     }
 

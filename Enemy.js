@@ -1,7 +1,7 @@
 export class Enemy {
     constructor(container, bounds) {
         this.container = container;
-        this.radius = 15;
+        this.radius = 14;
         this.speed = 2;
         
         const side = Math.floor(Math.random() * 4);
@@ -34,6 +34,6 @@ export class Enemy {
     }
 
     draw() {
-        this.element.style.transform = `translate(${this.x - 15}px, ${this.y - 15}px)`;
+        this.element.style.transform = `translate(${this.x - 14}px, ${this.y - 14}px)`;
     }
 }
