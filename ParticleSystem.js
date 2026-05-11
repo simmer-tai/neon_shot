@@ -8,10 +8,10 @@ export class ParticleSystem {
         const particleCount = Math.floor(Math.random() * 5) + 6; // 6〜10個
 
         for (let i = 0; i < particleCount; i++) {
-            // ランダム全方向（全方位）
-            const angle = Math.random() * Math.PI * 2;
-            const speed = Math.random() * 70 + 30; // 30〜100 px/frame (元の10-25の3-4倍)
-            const size = Math.floor(Math.random() * 7) + 6; // 6〜12px
+            // hitAngleを中心とした±60度（±π/3ラジアン）
+            const angle = hitAngle + (Math.random() - 0.5) * (Math.PI / 2);
+            const speed = Math.random() * 5 + 5; // 5〜10
+            const size = Math.floor(Math.random() * 3) + 3; // 3〜6px
             const initialRotation = Math.random() * 360;
             const rotationSpeed = Math.random() * 10 + 5; // 5〜15deg per frame
 
@@ -45,15 +45,15 @@ export class ParticleSystem {
 
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const p = this.particles[i];
-            p.scale -= dt * 0.03;
+            p.scale -= dt * 0.05;
 
             if (p.scale <= 0) {
                 p.el.remove();
                 this.particles.splice(i, 1);
             } else {
                 // 位置更新
-                p.vx *= 0.92; // 減衰
-                p.vy *= 0.92;
+                p.vx *= 0.97;
+                p.vy *= 0.97;
                 p.x += p.vx * dt;
                 p.y += p.vy * dt;
 
