@@ -6,13 +6,11 @@ export class ParticleSystem {
 
     spawnEnemyDeathParticles(x, y, hitAngle, container) {
         const particleCount = Math.floor(Math.random() * 5) + 6; // 6〜10個
-        const baseAngle = hitAngle;
 
         for (let i = 0; i < particleCount; i++) {
-            // ±60度のランダムなばらつき
-            const spread = (Math.random() - 0.5) * (Math.PI / 3);
-            const angle = baseAngle + spread;
-            const speed = Math.random() * 6 + 4; // 4〜10 px/frame
+            // ランダム全方向（全方位）
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Math.random() * 70 + 30; // 30〜100 px/frame (元の10-25の3-4倍)
             const size = Math.floor(Math.random() * 7) + 6; // 6〜12px
             const initialRotation = Math.random() * 360;
             const rotationSpeed = Math.random() * 10 + 5; // 5〜15deg per frame
@@ -37,7 +35,7 @@ export class ParticleSystem {
                 size,
                 rotation: initialRotation,
                 rotationSpeed,
-                scale: 1.0
+                scale: 3.0
             });
         }
     }
