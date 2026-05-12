@@ -985,3 +985,51 @@ body.safe-zone {
     100% { transform: translate(-1px, -1px) rotate(var(--angle)) translateX(18px) scaleX(0.3); opacity: 0; }
 }
 
+/* --- EnemyShooter スタイル --- */
+
+.enemy-shooter {
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    will-change: transform;
+    pointer-events: none;
+    top: 0;
+    left: 0;
+}
+
+.enemy-shooter::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    border-left: 16px solid transparent;
+    border-right: 16px solid transparent;
+    border-bottom: 28px solid #ff0055;
+    filter:
+        drop-shadow(0 0 6px #ff0055)
+        drop-shadow(0 0 14px #ff0055)
+        drop-shadow(0 0 28px #ff0055);
+}
+
+.enemy-shooter::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 14px solid #ff005544;
+    filter: drop-shadow(0 0 4px #ff0055);
+    animation: shooter-pulse 2s ease-in-out infinite;
+}
+
+@keyframes shooter-pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+}
+

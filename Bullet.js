@@ -8,23 +8,25 @@ export class Bullet {
         this.angle = angle;
         this.container = container;
 
+        // DOM要素を最初に生成
+        this.element = document.createElement('div');
+        this.element.className = 'bullet';
+
         // オプションから特殊フラグを取得
         this.isPiercing = options.isPiercing || (options.piercingCount > 0) || false;
         if (this.isPiercing) {
-            this.element.style.width = '40px';
-            this.element.style.height = '7px';
+            this.element.style.width = '60px';
+            this.element.style.height = '10px';
         }
         this.isHoming = options.isHoming || false;
         this.reflectCount = options.reflectCount || 0; // 残りバウンド回数
         this.piercingCount = options.piercingCount || 0;
+        this.damage = options.damage || 10;
 
         // トレイル用の過去座標履歴（最大10フレーム分）
         this.trail = [];
         this.trailMaxDuration = 167; // ms換算（60Hzの10フレーム相当）
         this._trailTick = 0;
-
-        this.element = document.createElement('div');
-        this.element.className = 'bullet';
     }
 
     // DOMにappendしてアクティブ化（プール利用時）
@@ -46,8 +48,17 @@ export class Bullet {
         this.isHoming = options.isHoming || false;
         this.reflectCount = options.reflectCount || 0;
         this.piercingCount = options.piercingCount || 0;
+        this.damage = options.damage || 10;
         this.trail = [];
         this._trailTick = 0;
+
+        if (this.isPiercing) {
+            this.element.style.width = '60px';
+            this.element.style.height = '10px';
+        } else {
+            this.element.style.width = '20px';
+            this.element.style.height = '4px';
+        }
     }
 
     update(enemies = [], deltaTime = 16.67, bounds = { width: 9999, height: 9999 }) {
@@ -125,6 +136,10 @@ export class Bullet {
     }
 
     draw() {
-        this.element.style.transform = `translate(${this.x - 10}px, ${this.y - 2}px) rotate(${this.angle}rad)`;
+        if (this.isPiercing) {
+            this.element.style.transform = `translate(${this.x - 30}px, ${this.y - 5}px) rotate(${this.angle}rad)`;
+        } else {
+            this.element.style.transform = `translate(${this.x - 10}px, ${this.y - 2}px) rotate(${this.angle}rad)`;
+        }
     }
 }

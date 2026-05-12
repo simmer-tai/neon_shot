@@ -1,6 +1,7 @@
 import { Player } from './Player.js';
 import { Bullet } from './Bullet.js';
-import { Enemy } from './Enemy.js';
+import { EnemyDrone } from './EnemyDrone.js';
+import { EnemyShooter } from './EnemyShooter.js';
 import { CardSystem, CARDS, MAIN_CARDS } from './CardSystem.js';
 import { ParticleSystem } from './ParticleSystem.js';
 import { ImpactEffect } from './ImpactEffect.js';
@@ -41,6 +42,7 @@ export class Game {
         // ゲーム状態
         this.isGameOver = false;
         this.killCount = 0;
+        this.totalDamage = 0;
         this.startTime = Date.now();
         this.survivalTime = 0;
         this.lastFireTime = 0;
@@ -50,6 +52,7 @@ export class Game {
         this.phaseTimeLeft = 60; // 秒
         this.difficultyLevel = 0;
         this.lastSpawnTime = 0;
+        this.lastShooterSpawnTime = 0;
 
         // カード管理
         this.inventory = [];
@@ -191,7 +194,8 @@ export class Game {
 
             this.bullets.push(this.getBullet(x, y, angle, this.player.bulletSpeed, {
                 isPiercing: this.player.piercingCount > 0,
-                reflectCount: this.player.reflectCount
+                reflectCount: this.player.reflectCount,
+                damage: 10
             }));
 
             // マルチショット判定
@@ -199,7 +203,8 @@ export class Game {
                 const spread = 0.2;
                 this.bullets.push(this.getBullet(x, y, angle + spread, this.player.bulletSpeed, {
                     isPiercing: this.player.piercingCount > 0,
-                    reflectCount: this.player.reflectCount
+                    reflectCount: this.player.reflectCount,
+                    damage: 10
                 }));
             }
         } else if (this.equippedMainCard.id === 'shotgun') {
@@ -214,7 +219,8 @@ export class Game {
                 const speed = this.player.bulletSpeed * 0.7;
                 this.bullets.push(this.getBullet(x, y, bulletAngle, speed, {
                     isPiercing: this.player.piercingCount > 0,
-                    reflectCount: this.player.reflectCount
+                    reflectCount: this.player.reflectCount,
+                    damage: 4
                 }));
             }
         } else if (this.equippedMainCard.id === 'sniper') {
@@ -226,7 +232,8 @@ export class Game {
             const speed = this.player.bulletSpeed * 3;
             this.bullets.push(this.getBullet(x, y, angle, speed, {
                 isPiercing: true,
-                reflectCount: this.player.reflectCount
+                reflectCount: this.player.reflectCount,
+                damage: 40
             }));
         } else if (this.equippedMainCard.id === 'homing') {
             // ホーミング: 追尾弾
@@ -238,7 +245,8 @@ export class Game {
             this.bullets.push(this.getBullet(x, y, angle, speed, {
                 isHoming: true,
                 isPiercing: this.player.piercingCount > 0,
-                reflectCount: this.player.reflectCount
+                reflectCount: this.player.reflectCount,
+                damage: 8
             }));
         }
     }
@@ -490,10 +498,13 @@ export class Game {
         // ── ステータスパネル更新 ──
         const statusPanel = document.getElementById('status-panel');
         if (statusPanel) {
+            const damage     = this.equippedMainCard?.id === 'shotgun' ? 4
+                             : this.equippedMainCard?.id === 'sniper'  ? 40
+                             : this.equippedMainCard?.id === 'homing'  ? 8
+                             : 10;
             const isSniper   = this.equippedMainCard?.id === 'sniper';
             const isShotgun  = this.equippedMainCard?.id === 'shotgun';
 
-            const damage     = 1; // 将来拡張用固定値
             const pierce     = isSniper  ? 5 : 1;
             const multiShot  = isShotgun ? 1 : Math.round(this.player.multiShotChance * 100);
             const multiUnit  = isShotgun ? '' : '%';
@@ -722,10 +733,20 @@ export class Game {
             const currentInterval = Math.max(300, this.baseSpawnInterval - (this.difficultyLevel * 100));
             const now = Date.now();
             if (now - this.lastSpawnTime > currentInterval) {
-                const enemy = new Enemy(this.container, this.bounds);
-                enemy.speed = this.baseEnemySpeed + (this.difficultyLevel * 0.3);
-                this.enemies.push(enemy);
+                const drone = new EnemyDrone(this.container, this.bounds);
+                drone.speed = this.baseEnemySpeed + (this.difficultyLevel * 0.3);
+                this.enemies.push(drone);
                 this.lastSpawnTime = now;
+            }
+
+            // SHOOTER: 8秒ごとにスポーン
+            if (now - this.lastShooterSpawnTime > 8000) {
+                const shooter = new EnemyShooter(
+                    this.container, this.bounds,
+                    this.player.x, this.player.y
+                );
+                this.enemies.push(shooter);
+                this.lastShooterSpawnTime = now;
             }
         }
 
@@ -764,52 +785,70 @@ export class Game {
         // 敵の更新と衝突判定
         for (let i = this.enemies.length - 1; i >= 0; i--) {
             const e = this.enemies[i];
-            e.update(this.player, deltaTime);
+
+            if (e instanceof EnemyShooter) {
+                e.update(deltaTime);
+                if (e.shouldFire()) {
+                    const muzzle = e.getMuzzlePosition();
+                    this.bullets.push(this.getBullet(
+                        muzzle.x, muzzle.y, e.angle,
+                        this.player.bulletSpeed * 0.8,
+                        { damage: 15, isEnemyBullet: true }
+                    ));
+                }
+            } else {
+                e.update(deltaTime);
+            }
 
             let hit = false;
             // 弾 vs 敵
             for (let j = this.bullets.length - 1; j >= 0; j--) {
                 const b = this.bullets[j];
+                if (b.isEnemyBullet) continue;
                 const dx = b.x - e.x;
                 const dy = b.y - e.y;
                 const distSq = dx * dx + dy * dy;
                 const hitRadius = e.radius + 10;
                 if (distSq < hitRadius * hitRadius) {
-                    // 弾が飛んできた方向を計算
-                    const hitAngle = Math.atan2(b.vy, b.vx);
-                    this.particleSystem.spawnEnemyDeathParticles(e.x, e.y, hitAngle, this.container);
+                    e.hp -= b.damage;
+                    this.totalDamage += b.damage;
 
-                    // 着弾エフェクト生成
-                    let impactColor = '#00ffff';
-                    let impactScale = 1.5;
-                    let impactParticles = 5;
-
-                    if (b.isPiercing) {
-                        impactColor = '#ffffff';
-                        impactScale = 2.0;
-                        impactParticles = 6;
-                    } else if (b.isHoming) {
-                        impactColor = '#ff00ff';
-                        impactScale = 1.5;
-                    } else if (this.equippedMainCard?.id === 'shotgun') {
-                        impactScale = 0.65;
-                    }
-
-                    this.impactEffects.push(new ImpactEffect(b.x, b.y, this.container, {
-                        color: impactColor,
-                        scale: impactScale,
-                        particleCount: impactParticles
-                    }));
-
-                    e.destroy();
-                    this.enemies.splice(i, 1);
                     if (!b.isPiercing) {
                         this.returnBullet(b);
                         this.bullets.splice(j, 1);
                     }
-                    this.killCount++;
-                    hit = true;
-                    break;
+
+                    if (e.hp <= 0) {
+                        const hitAngle = Math.atan2(b.vy, b.vx);
+                        this.particleSystem.spawnEnemyDeathParticles(e.x, e.y, hitAngle, this.container);
+
+                        let impactColor = '#00ffff';
+                        let impactScale = 1.5;
+                        let impactParticles = 5;
+
+                        if (b.isPiercing) {
+                            impactColor = '#ffffff';
+                            impactScale = 2.0;
+                            impactParticles = 6;
+                        } else if (b.isHoming) {
+                            impactColor = '#ff00ff';
+                            impactScale = 1.5;
+                        } else if (this.equippedMainCard?.id === 'shotgun') {
+                            impactScale = 0.65;
+                        }
+
+                        this.impactEffects.push(new ImpactEffect(b.x, b.y, this.container, {
+                            color: impactColor,
+                            scale: impactScale,
+                            particleCount: impactParticles
+                        }));
+
+                        e.destroy();
+                        this.enemies.splice(i, 1);
+                        this.killCount++;
+                        hit = true;
+                        break;
+                    }
                 }
             }
 
@@ -829,6 +868,13 @@ export class Game {
                         this.gameOver();
                     }
                 }
+                e.destroy();
+                this.enemies.splice(i, 1);
+                continue;
+            }
+
+            // 画面外デスポーン判定
+            if (e.isOffScreen(this.bounds)) {
                 e.destroy();
                 this.enemies.splice(i, 1);
             }
@@ -868,7 +914,7 @@ export class Game {
     gameOver() {
         this.isGameOver = true;
         this.gameOverUI.classList.remove('hidden');
-        this.finalStatsUI.textContent = `Survival: ${this.survivalTime}s | Kills: ${this.killCount}`;
+        this.finalStatsUI.textContent = `Survival: ${this.survivalTime}s | Kills: ${this.killCount} | Damage: ${this.totalDamage}`;
     }
 
     restart() {
@@ -888,11 +934,14 @@ export class Game {
         this.trailCtx.clearRect(0, 0, this.trailCanvas.width, this.trailCanvas.height);
 
         this.killCount = 0;
+        this.totalDamage = 0;
         this.startTime = Date.now();
         this.survivalTime = 0;
         this.phase = 'BATTLE';
         this.phaseTimeLeft = 60;
         this.difficultyLevel = 0;
+        this.lastSpawnTime = 0;
+        this.lastShooterSpawnTime = 0;
         this.isGameOver = false;
 
         // カード初期化
