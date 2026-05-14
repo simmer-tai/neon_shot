@@ -409,26 +409,26 @@ export class Game {
 
         spDisplay.textContent = `SP: ${this.skillTree.sp}`;
 
-        // フェーズ1: 既存ノードに消滅アニメーションを付与
-        const existingWrappers = Array.from(container.querySelectorAll('.skill-node-wrapper, .skill-connector-row, .skill-tier-row'));
+        const hasExisting = container.children.length > 0;
 
-        if (existingWrappers.length === 0) {
-            // 初回は即座に描画
+        const doRender = () => {
+            container.innerHTML = '';
             this._renderSkillTreeContent(container);
+        };
+
+        if (!hasExisting) {
+            doRender();
             return;
         }
 
-        // すべての子要素に消滅アニメーションを付与
+        // 既存要素を消滅アニメーションで退場させてから再描画
         Array.from(container.children).forEach(child => {
             child.style.animation = 'node-disappear 0.18s ease-in forwards';
             child.style.pointerEvents = 'none';
+            child.style.opacity = '1';
         });
 
-        // フェーズ2: アニメーション完了後に再描画
-        setTimeout(() => {
-            container.innerHTML = '';
-            this._renderSkillTreeContent(container);
-        }, 200);
+        setTimeout(doRender, 200);
     }
 
     _renderSkillTreeContent(container) {
