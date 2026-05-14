@@ -14,14 +14,17 @@ export class EnemyDrone {
         else if (side === 2) { this.x = Math.random() * bounds.width; this.y = bounds.height + padding; }
         else { this.x = -padding; this.y = Math.random() * bounds.height; }
 
-        // 移動方向を生成時に固定
-        const centerX = bounds.width / 2;
-        const centerY = bounds.height / 2;
-        const baseAngle = Math.atan2(centerY - this.y, centerX - this.x);
-        const spread = (Math.random() - 0.5) * (Math.PI / 3); // ±30度
-        const angle = baseAngle + spread;
-        this.vx = Math.cos(angle);
-        this.vy = Math.sin(angle);
+        // 出現した辺に応じて移動方向を4方向に固定
+        if (side === 0) { this.vx = 0; this.vy = 1; }       // 上辺 → 下へ
+        else if (side === 1) { this.vx = -1; this.vy = 0; } // 右辺 → 左へ
+        else if (side === 2) { this.vx = 0; this.vy = -1; } // 下辺 → 上へ
+        else { this.vx = 1; this.vy = 0; }                  // 左辺 → 右へ
+
+        // ジグザグ用プロパティ
+        this.isZigzag = false;
+        this.zigzagPhase = Math.random() * Math.PI * 2;
+        this.zigzagAmplitude = 2;
+        this.zigzagFrequency = 0.05;
 
         this.element = document.createElement('div');
         this.element.className = 'enemy';
@@ -30,8 +33,18 @@ export class EnemyDrone {
 
     update(deltaTime = 16.67) {
         const dt = deltaTime / 16.67;
-        this.x += this.vx * this.speed * dt;
-        this.y += this.vy * this.speed * dt;
+
+        if (this.isZigzag) {
+            this.zigzagPhase += this.zigzagFrequency * dt;
+            const perpX = -this.vy;
+            const perpY = this.vx;
+            const wave = Math.sin(this.zigzagPhase) * this.zigzagAmplitude;
+            this.x += (this.vx * this.speed + perpX * wave) * dt;
+            this.y += (this.vy * this.speed + perpY * wave) * dt;
+        } else {
+            this.x += this.vx * this.speed * dt;
+            this.y += this.vy * this.speed * dt;
+        }
     }
 
     isOffScreen(bounds) {

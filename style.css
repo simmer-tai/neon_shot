@@ -989,7 +989,7 @@ body.safe-zone {
 
 .enemy-shooter {
     position: absolute;
-    width: 32px;
+    width: 21px;
     height: 32px;
     background: transparent;
     will-change: transform;
@@ -1005,8 +1005,8 @@ body.safe-zone {
     left: 0;
     width: 0;
     height: 0;
-    border-left: 16px solid transparent;
-    border-right: 16px solid transparent;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
     border-bottom: 28px solid #ff0055;
     filter:
         drop-shadow(0 0 6px #ff0055)
@@ -1018,11 +1018,11 @@ body.safe-zone {
     content: '';
     position: absolute;
     top: 8px;
-    left: 8px;
+    left: 3px;
     width: 0;
     height: 0;
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
     border-bottom: 14px solid #ff005544;
     filter: drop-shadow(0 0 4px #ff0055);
     animation: shooter-pulse 2s ease-in-out infinite;
@@ -1031,5 +1031,41 @@ body.safe-zone {
 @keyframes shooter-pulse {
     0%, 100% { opacity: 0.4; }
     50% { opacity: 1; }
+}
+
+.enemy-bullet {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background-color: #ff0055;
+    border: 1.5px solid #ff6688;
+    box-sizing: border-box;
+    box-shadow:
+        0 0 6px #ff0055,
+        0 0 12px #ff0055,
+        0 0 24px #ff0055;
+    pointer-events: none;
+    will-change: transform;
+    top: 0;
+    left: 0;
+}
+
+.enemy-bullet-ghost {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background-color: transparent;
+    border: 1.5px solid #ff0055;
+    box-sizing: border-box;
+    box-shadow: 0 0 6px #ff0055;
+    pointer-events: none;
+    top: 0;
+    left: 0;
+    animation: ghost-fade 0.1s ease-out forwards;
+}
+
+@keyframes ghost-fade {
+    from { opacity: 0.6; }
+    to   { opacity: 0; }
 }
 

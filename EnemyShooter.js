@@ -16,12 +16,12 @@ export class EnemyShooter {
         // 出現時にプレイヤー方向を向いて固定
         this.angle = Math.atan2(playerY - this.y, playerX - this.x);
 
-        // 停止目標座標
-        const margin = 100; // 画面端からの余白
-        this.targetX = margin + Math.random() * (bounds.width - margin * 2);
-        this.targetY = margin + Math.random() * (bounds.height - margin * 2);
-        this.isMoving = true; // 移動中フラグ
-        this.moveSpeed = 3;   // 移動速度
+        // 移動関連プロパティ
+        this.moveSpeed = 4;
+        this.isDecelerating = false;
+        this.decelerateTimer = 0;
+        this.decelerateDuration = 1000; // 1秒かけて減速
+        this.initialMoveSpeed = 4;
 
         // 発射タイマー（最初の発射は5秒後）
         this.fireTimer = 5000;
@@ -34,21 +34,29 @@ export class EnemyShooter {
     }
 
     update(deltaTime) {
-        if (this.isMoving) {
-            const dx = this.targetX - this.x;
-            const dy = this.targetY - this.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < 4) {
-                this.x = this.targetX;
-                this.y = this.targetY;
-                this.isMoving = false;
-            } else {
-                const dt = deltaTime / 16.67;
-                this.x += (dx / dist) * this.moveSpeed * dt;
-                this.y += (dy / dist) * this.moveSpeed * dt;
+        const dt = deltaTime / 16.67;
+
+        if (this.isDecelerating) {
+            // 1秒かけて減速
+            this.decelerateTimer += deltaTime;
+            const progress = Math.min(this.decelerateTimer / this.decelerateDuration, 1);
+            this.moveSpeed = this.initialMoveSpeed * (1 - progress);
+        } else {
+            // 画面内に入ったか判定
+            if (
+                this.x > 0 && this.x < this.container.offsetWidth &&
+                this.y > 0 && this.y < this.container.offsetHeight
+            ) {
+                this.isDecelerating = true;
             }
         }
-        if (!this.isMoving) {
+
+        // スポーン時の向き（this.angle）方向へ前進
+        this.x += Math.cos(this.angle) * this.moveSpeed * dt;
+        this.y += Math.sin(this.angle) * this.moveSpeed * dt;
+
+        // 発射タイマーは停止後のみカウント
+        if (this.moveSpeed <= 0) {
             this.fireTimer -= deltaTime;
         }
     }

@@ -10,18 +10,26 @@ export class Bullet {
 
         // DOM要素を最初に生成
         this.element = document.createElement('div');
-        this.element.className = 'bullet';
 
         // オプションから特殊フラグを取得
-        this.isPiercing = options.isPiercing || (options.piercingCount > 0) || false;
-        if (this.isPiercing) {
-            this.element.style.width = '60px';
-            this.element.style.height = '10px';
-        }
+        this.isEnemyBullet = options.isEnemyBullet || false;
+        this.element.className = this.isEnemyBullet ? 'enemy-bullet' : 'bullet';
+
+        this.isPiercing = options.isPiercing || false;
         this.isHoming = options.isHoming || false;
         this.reflectCount = options.reflectCount || 0; // 残りバウンド回数
         this.piercingCount = options.piercingCount || 0;
         this.damage = options.damage || 10;
+
+        // isPiercing の場合のサイズ上書きは bullet クラスのみに適用
+        if (this.isPiercing && !this.isEnemyBullet) {
+            this.element.style.width = '60px';
+            this.element.style.height = '10px';
+        } else if (!this.isEnemyBullet) {
+            this.element.style.width = '20px';
+            this.element.style.height = '4px';
+        }
+        // enemy-bullet のサイズは CSS で固定するので JS では触らない
 
         // トレイル用の過去座標履歴（最大10フレーム分）
         this.trail = [];
@@ -44,7 +52,12 @@ export class Bullet {
         this.speed = speed;
         this.vx = Math.cos(angle) * speed;
         this.vy = Math.sin(angle) * speed;
-        this.isPiercing = options.isPiercing || (options.piercingCount > 0) || false;
+
+        // フラグを必ずリセット
+        this.isEnemyBullet = options.isEnemyBullet || false;
+        this.element.className = this.isEnemyBullet ? 'enemy-bullet' : 'bullet';
+
+        this.isPiercing = options.isPiercing || false;
         this.isHoming = options.isHoming || false;
         this.reflectCount = options.reflectCount || 0;
         this.piercingCount = options.piercingCount || 0;
@@ -52,7 +65,12 @@ export class Bullet {
         this.trail = [];
         this._trailTick = 0;
 
-        if (this.isPiercing) {
+        // サイズをクラスに応じてリセット
+        if (this.isEnemyBullet) {
+            // enemy-bullet のサイズは CSS 固定、JS では触らない
+            this.element.style.width = '';
+            this.element.style.height = '';
+        } else if (this.isPiercing) {
             this.element.style.width = '60px';
             this.element.style.height = '10px';
         } else {
@@ -129,6 +147,18 @@ export class Bullet {
         return (this.x < -100 || this.x > bounds.width + 100 || this.y < -100 || this.y > bounds.height + 100);
     }
 
+    spawnAfterimage(container) {
+        if (!this.isEnemyBullet) return;
+        const ghost = document.createElement('div');
+        ghost.className = 'enemy-bullet-ghost';
+        ghost.style.transform = this.element.style.transform;
+        container.appendChild(ghost);
+        // 100ms後に自動削除
+        setTimeout(() => {
+            if (ghost.parentNode) ghost.parentNode.removeChild(ghost);
+        }, 100);
+    }
+
     destroy() {
         if (this.element.parentNode) {
             this.container.removeChild(this.element);
@@ -136,8 +166,10 @@ export class Bullet {
     }
 
     draw() {
-        if (this.isPiercing) {
+        if (this.isPiercing && !this.isEnemyBullet) {
             this.element.style.transform = `translate(${this.x - 30}px, ${this.y - 5}px) rotate(${this.angle}rad)`;
+        } else if (this.isEnemyBullet) {
+            this.element.style.transform = `translate(${this.x - 5}px, ${this.y - 5}px) rotate(${this.angle}rad)`;
         } else {
             this.element.style.transform = `translate(${this.x - 10}px, ${this.y - 2}px) rotate(${this.angle}rad)`;
         }

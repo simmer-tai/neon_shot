@@ -53,6 +53,10 @@ export class Game {
         this.difficultyLevel = 0;
         this.lastSpawnTime = 0;
         this.lastShooterSpawnTime = 0;
+        this.lastWaveSpawnTime = 0;
+        this.lastVSpawnTime = 0;
+        this.waveInterval = 20000;  // 20秒ごと
+        this.vInterval = 30000;     // 30秒ごと
 
         // カード管理
         this.inventory = [];
@@ -249,6 +253,102 @@ export class Game {
                 damage: 8
             }));
         }
+    }
+
+    spawnWaveFormation() {
+        const count = 5;
+        const side = Math.floor(Math.random() * 4);
+        const padding = 50;
+        const gap = 40; // 体間の間隔(px)
+
+        // 出現位置と進行方向を辺に応じて決定
+        let baseX, baseY, dirX, dirY;
+        if (side === 0) {
+            baseX = this.bounds.width / 2; baseY = -padding;
+            dirX = 0; dirY = 1;
+        } else if (side === 1) {
+            baseX = this.bounds.width + padding; baseY = this.bounds.height / 2;
+            dirX = -1; dirY = 0;
+        } else if (side === 2) {
+            baseX = this.bounds.width / 2; baseY = this.bounds.height + padding;
+            dirX = 0; dirY = -1;
+        } else {
+            baseX = -padding; baseY = this.bounds.height / 2;
+            dirX = 1; dirY = 0;
+        }
+
+        for (let i = 0; i < count; i++) {
+            setTimeout(() => {
+                if (this.phase !== 'BATTLE' || this.isGameOver) return;
+                const drone = new EnemyDrone(this.container, this.bounds);
+                drone.speed = this.baseEnemySpeed + (this.difficultyLevel * 0.3);
+
+                // 先頭を基点に、進行方向と逆側へgapずつずらして配置
+                drone.x = baseX - dirX * i * gap;
+                drone.y = baseY - dirY * i * gap;
+
+                // 進行方向を固定（4方向）
+                drone.vx = dirX;
+                drone.vy = dirY;
+
+                this.enemies.push(drone);
+            }, i * 150);
+        }
+    }
+
+    spawnVFormation() {
+        const side = Math.floor(Math.random() * 4);
+        const padding = 50;
+        const count = 7; // 先頭1 + 左右各3
+        const spread = 35;
+
+        // V字のオフセット定義（先頭を0として後ろに広がる）
+        // index 0: 先頭, 1-3: 右翼, 4-6: 左翼
+        const offsets = [
+            { perp: 0, depth: 0 },
+            { perp: 1, depth: 1 },
+            { perp: 2, depth: 2 },
+            { perp: 3, depth: 3 },
+            { perp: -1, depth: 1 },
+            { perp: -2, depth: 2 },
+            { perp: -3, depth: 3 },
+        ];
+
+        // 進行方向ベクトルを決定
+        let dirX, dirY, baseX, baseY;
+        if (side === 0) {
+            baseX = this.bounds.width / 2; baseY = -padding;
+            dirX = 0; dirY = 1;
+        } else if (side === 1) {
+            baseX = this.bounds.width + padding; baseY = this.bounds.height / 2;
+            dirX = -1; dirY = 0;
+        } else if (side === 2) {
+            baseX = this.bounds.width / 2; baseY = this.bounds.height + padding;
+            dirX = 0; dirY = -1;
+        } else {
+            baseX = -padding; baseY = this.bounds.height / 2;
+            dirX = 1; dirY = 0;
+        }
+
+        // 進行方向に垂直なベクトル
+        const perpX = -dirY;
+        const perpY = dirX;
+
+        offsets.forEach((offset) => {
+            if (this.phase !== 'BATTLE' || this.isGameOver) return;
+            const drone = new EnemyDrone(this.container, this.bounds);
+            drone.speed = this.baseEnemySpeed + (this.difficultyLevel * 0.3);
+
+            // 位置: 垂直方向にperp*spread、後方にdepth*spreadずらす
+            drone.x = baseX + perpX * offset.perp * spread - dirX * offset.depth * spread;
+            drone.y = baseY + perpY * offset.perp * spread - dirY * offset.depth * spread;
+
+            // 進行方向を固定（全員同じ方向）
+            drone.vx = dirX;
+            drone.vy = dirY;
+
+            this.enemies.push(drone);
+        });
     }
 
     // フェーズの切り替え
@@ -732,12 +832,6 @@ export class Game {
         if (this.phase === 'BATTLE') {
             const currentInterval = Math.max(300, this.baseSpawnInterval - (this.difficultyLevel * 100));
             const now = Date.now();
-            if (now - this.lastSpawnTime > currentInterval) {
-                const drone = new EnemyDrone(this.container, this.bounds);
-                drone.speed = this.baseEnemySpeed + (this.difficultyLevel * 0.3);
-                this.enemies.push(drone);
-                this.lastSpawnTime = now;
-            }
 
             // SHOOTER: 8秒ごとにスポーン
             if (now - this.lastShooterSpawnTime > 8000) {
@@ -747,6 +841,29 @@ export class Game {
                 );
                 this.enemies.push(shooter);
                 this.lastShooterSpawnTime = now;
+            }
+
+            // ウェーブ編隊
+            if (now - this.lastWaveSpawnTime > this.waveInterval) {
+                this.spawnWaveFormation();
+                this.lastWaveSpawnTime = now;
+            }
+
+            // V字編隊
+            if (now - this.lastVSpawnTime > this.vInterval) {
+                this.spawnVFormation();
+                this.lastVSpawnTime = now;
+            }
+
+            // ジグザグ（30%の確率で通常スポーンをジグザグに置換）
+            if (now - this.lastSpawnTime > currentInterval) {
+                const drone = new EnemyDrone(this.container, this.bounds);
+                drone.speed = this.baseEnemySpeed + (this.difficultyLevel * 0.3);
+                if (Math.random() < 0.3) {
+                    drone.isZigzag = true;
+                }
+                this.enemies.push(drone);
+                this.lastSpawnTime = now;
             }
         }
 
@@ -792,7 +909,7 @@ export class Game {
                     const muzzle = e.getMuzzlePosition();
                     this.bullets.push(this.getBullet(
                         muzzle.x, muzzle.y, e.angle,
-                        this.player.bulletSpeed * 0.8,
+                        this.player.bulletSpeed * 0.4,
                         { damage: 15, isEnemyBullet: true }
                     ));
                 }
@@ -880,6 +997,24 @@ export class Game {
             }
         }
 
+        // 敵弾 vs プレイヤーの衝突判定
+        for (let j = this.bullets.length - 1; j >= 0; j--) {
+            const b = this.bullets[j];
+            if (!b.isEnemyBullet) continue;
+            const dx = b.x - this.player.x;
+            const dy = b.y - this.player.y;
+            const distSq = dx * dx + dy * dy;
+            if (distSq < this.player.radius * this.player.radius) {
+                this.returnBullet(b);
+                this.bullets.splice(j, 1);
+                if (this.player.takeDamage()) {
+                    if (this.player.hp <= 0) {
+                        this.gameOver();
+                    }
+                }
+            }
+        }
+
         // 着弾エフェクトの更新
         for (let i = this.impactEffects.length - 1; i >= 0; i--) {
             const done = this.impactEffects[i].update(deltaTime);
@@ -963,7 +1098,10 @@ export class Game {
 
     draw() {
         this.player.draw();
-        this.bullets.forEach(b => b.draw());
+        this.bullets.forEach(b => {
+            b.spawnAfterimage(this.container); // enemy-bullet のみ内部で判定
+            b.draw();
+        });
         this.enemies.forEach(e => e.draw());
         this.drawTrails();
     }
@@ -975,6 +1113,7 @@ export class Game {
         ctx.lineJoin = 'round';
 
         for (const b of this.bullets) {
+            if (b.isEnemyBullet) continue;
             const trail = b.trail;
             if (!trail || trail.length < 2) continue;
 
@@ -1011,7 +1150,43 @@ export class Game {
             ctx.stroke(path);
         }
 
-        // globalAlphaをリセット
+        // 敵弾トレイル（#ff0055 グラデーション）
+        for (const b of this.bullets) {
+            if (!b.isEnemyBullet) continue;
+            const trail = b.trail;
+            if (!trail || trail.length < 2) continue;
+
+            const head = trail[trail.length - 1];
+            const tail = trail[0];
+
+            const grad = ctx.createLinearGradient(tail.x, tail.y, head.x, head.y);
+            grad.addColorStop(0, 'rgba(255, 0, 85, 0)');
+            grad.addColorStop(0.5, 'rgba(255, 0, 85, 0.2)');
+            grad.addColorStop(1, 'rgba(255, 0, 85, 0.95)');
+
+            const path = new Path2D();
+            path.moveTo(trail[0].x, trail[0].y);
+            for (let i = 1; i < trail.length; i++) {
+                path.lineTo(trail[i].x, trail[i].y);
+            }
+
+            // 層1: 外側グロー
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = 12;
+            ctx.globalAlpha = 0.12;
+            ctx.stroke(path);
+
+            // 層2: 中間グロー
+            ctx.lineWidth = 6;
+            ctx.globalAlpha = 0.35;
+            ctx.stroke(path);
+
+            // 層3: コア
+            ctx.lineWidth = 2;
+            ctx.globalAlpha = 1.0;
+            ctx.stroke(path);
+        }
+
         ctx.globalAlpha = 1.0;
     }
 }

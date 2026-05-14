@@ -11,7 +11,7 @@ export class ParticleSystem {
             // hitAngleを中心とした±60度（±π/3ラジアン）
             const angle = hitAngle + (Math.random() - 0.5) * (Math.PI / 2);
             const speed = Math.random() * 5 + 5; // 5〜10
-            const size = Math.floor(Math.random() * 3) + 3; // 3〜6px
+            const size = Math.floor(Math.random() * 2) + 2; // 2〜4px
             const initialRotation = Math.random() * 360;
             const rotationSpeed = Math.random() * 10 + 5; // 5〜15deg per frame
 
@@ -35,7 +35,7 @@ export class ParticleSystem {
                 size,
                 rotation: initialRotation,
                 rotationSpeed,
-                scale: 3.0
+                scale: 2.1
             });
         }
     }
