@@ -930,10 +930,25 @@ export class Game {
                     e.hp -= b.damage;
                     this.totalDamage += b.damage;
 
-                    // 着弾エフェクトを毎回生成
-                    this.impactEffects.push(new ImpactEffect(b.x, b.y, this.container, {
-                        angle: Math.atan2(b.vy, b.vx)
-                    }));
+                    if (e.hp <= 0) {
+                        const hitAngle = Math.atan2(b.vy, b.vx);
+                        this.particleSystem.spawnEnemyDeathParticles(e.x, e.y, hitAngle, this.container);
+
+                        // 敵撃破時は逆方向の着弾エフェクト
+                        this.impactEffects.push(new ImpactEffect(b.x, b.y, this.container, {
+                            angle: Math.atan2(b.vy, b.vx) + Math.PI
+                        }));
+
+                        e.destroy();
+                        this.enemies.splice(i, 1);
+                        this.killCount++;
+                        hit = true;
+                    } else {
+                        // 敵が生き残った場合は通常方向の着弾エフェクト
+                        this.impactEffects.push(new ImpactEffect(b.x, b.y, this.container, {
+                            angle: Math.atan2(b.vy, b.vx)
+                        }));
+                    }
 
                     if (!b.isPiercing) {
                         this.returnBullet(b);
@@ -941,13 +956,6 @@ export class Game {
                     }
 
                     if (e.hp <= 0) {
-                        const hitAngle = Math.atan2(b.vy, b.vx);
-                        this.particleSystem.spawnEnemyDeathParticles(e.x, e.y, hitAngle, this.container);
-
-                        e.destroy();
-                        this.enemies.splice(i, 1);
-                        this.killCount++;
-                        hit = true;
                         break;
                     }
                 }
