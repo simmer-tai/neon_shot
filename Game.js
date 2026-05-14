@@ -930,6 +930,11 @@ export class Game {
                     e.hp -= b.damage;
                     this.totalDamage += b.damage;
 
+                    // 着弾エフェクトを毎回生成
+                    this.impactEffects.push(new ImpactEffect(b.x, b.y, this.container, {
+                        angle: Math.atan2(b.vy, b.vx)
+                    }));
+
                     if (!b.isPiercing) {
                         this.returnBullet(b);
                         this.bullets.splice(j, 1);
@@ -938,27 +943,6 @@ export class Game {
                     if (e.hp <= 0) {
                         const hitAngle = Math.atan2(b.vy, b.vx);
                         this.particleSystem.spawnEnemyDeathParticles(e.x, e.y, hitAngle, this.container);
-
-                        let impactColor = '#00ffff';
-                        let impactScale = 1.5;
-                        let impactParticles = 5;
-
-                        if (b.isPiercing) {
-                            impactColor = '#ffffff';
-                            impactScale = 2.0;
-                            impactParticles = 6;
-                        } else if (b.isHoming) {
-                            impactColor = '#ff00ff';
-                            impactScale = 1.5;
-                        } else if (this.equippedMainCard?.id === 'shotgun') {
-                            impactScale = 0.65;
-                        }
-
-                        this.impactEffects.push(new ImpactEffect(b.x, b.y, this.container, {
-                            color: impactColor,
-                            scale: impactScale,
-                            particleCount: impactParticles
-                        }));
 
                         e.destroy();
                         this.enemies.splice(i, 1);

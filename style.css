@@ -945,72 +945,21 @@ body.safe-zone {
     pointer-events: none;
 }
 
-/* 衝撃波リング */
-.impact-shockwave {
-    position: absolute;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    border: 2px solid var(--impact-color);
-    transform: translate(-50%, -50%) scale(0);
-    box-shadow:
-        0 0 8px var(--impact-color),
-        0 0 20px var(--impact-color),
-        inset 0 0 8px var(--impact-color);
-    animation: shockwave-expand 0.45s ease-out forwards;
-}
-
-.impact-shockwave:nth-child(2) {
-    animation-delay: 80ms;
-    opacity: 0.5;
-}
-
-@keyframes shockwave-expand {
-    0%   { transform: translate(-50%, -50%) scale(0);   opacity: 1; }
-    60%  { opacity: 0.8; }
-    100% { transform: translate(-50%, -50%) scale(4.5); opacity: 0; }
-}
-
-/* スパークライン */
-.impact-spark {
+/* 着弾パーティクル（四角） */
+.impact-particle-sq {
     position: absolute;
     top: 0;
     left: 0;
-    width: 28px;
-    height: 2.5px;
-    background: linear-gradient(to right, var(--impact-color), transparent);
-    border-radius: 2px;
-    transform-origin: left center;
-    transform: translate(-2px, -1px) rotate(var(--angle)) scaleX(0);
-    box-shadow: 0 0 6px var(--impact-color), 0 0 14px var(--impact-color);
-    animation: spark-fly 0.35s 30ms ease-out forwards;
-}
-
-@keyframes spark-fly {
-    0%   { transform: translate(-2px, -1px) rotate(var(--angle)) scaleX(0) translateX(0);   opacity: 1; }
-    30%  { transform: translate(-2px, -1px) rotate(var(--angle)) scaleX(1) translateX(0);   opacity: 1; }
-    100% { transform: translate(-2px, -1px) rotate(var(--angle)) scaleX(0.4) translateX(30px); opacity: 0; }
-}
-
-/* コアフラッシュ */
-.impact-core {
-    position: absolute;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: #ffffff;
-    transform: translate(-50%, -50%) scale(0);
+    background: transparent;
+    border: 2px solid #00ffff;
+    box-sizing: border-box;
     box-shadow:
-        0 0 10px #ffffff,
-        0 0 24px var(--impact-color),
-        0 0 48px var(--impact-color);
-    animation: core-flash 0.2s ease-out forwards;
-}
-
-@keyframes core-flash {
-    0%   { transform: translate(-50%, -50%) scale(0); opacity: 1; }
-    40%  { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-    100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+        0 0 4px #00ffff,
+        0 0 10px #00ffff,
+        0 0 20px #00ffff;
+    filter: blur(0.3px);
+    pointer-events: none;
+    will-change: transform, opacity;
 }
 
 /* --- EnemyShooter スタイル --- */
