@@ -192,24 +192,7 @@ body.safe-zone {
 
 /* フラッシュ演出 */
 #flash-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: #fff;
-    opacity: 0;
-    pointer-events: none;
-    z-index: 100;
-}
-
-.flash-active {
-    animation: flash-anim 0.5s ease-out;
-}
-
-@keyframes flash-anim {
-    0% { opacity: 0.8; }
-    100% { opacity: 0; }
+    display: none;
 }
 
 /* ゲームオーバー画面 */
@@ -280,7 +263,7 @@ body.safe-zone {
 
 #build-ui {
     background-image: none;
-    animation: buildUIEntry 0.4s ease-out forwards;
+    transition: opacity 0.3s ease;
     position: relative;
 }
 
@@ -297,11 +280,6 @@ body.safe-zone {
 #build-ui > *:not(#build-grid-canvas) {
     position: relative;
     z-index: 1;
-}
-
-@keyframes buildUIEntry {
-    from { opacity: 0; transform: translateY(-20px); }
-    to { opacity: 1; transform: translateY(0); }
 }
 
 /* カード選択用UIの特別スタイル（オーバーレイなし） */
@@ -1041,5 +1019,475 @@ body.safe-zone {
 @keyframes ghost-fade {
     from { opacity: 0.6; }
     to   { opacity: 0; }
+}
+
+/* === スキルツリーUI === */
+
+#skill-tree-layout {
+    display: flex;
+    width: 92%;
+    max-width: 1100px;
+    height: 580px;
+    gap: 40px;
+    align-items: flex-start;
+    position: relative;
+    z-index: 1;
+}
+
+#skill-tree-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow-y: auto;
+}
+
+#skill-tree-sp {
+    font-size: 20px;
+    letter-spacing: 3px;
+    color: #00ffff;
+    text-shadow: 0 0 10px #00ffff;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+#skill-tree-nodes {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+/* 1段分のノード行 */
+.skill-tier-row {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    align-items: center;
+}
+
+/* ノードボタン本体 */
+/* Wrapper for glow + node */
+.skill-node-wrapper {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+    width: fit-content;
+    height: fit-content;
+}
+
+.skill-node-wrapper:hover {
+    transform: translateY(-2px);
+}
+
+.skill-node-wrapper.disabled {
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Glow layer */
+.skill-node-glow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+    z-index: 0;
+}
+
+.glow-path-a {
+    fill: none;
+    stroke-width: 2;
+    opacity: 0;
+    filter: blur(3px);
+}
+
+.glow-path-b {
+    fill: none;
+    stroke-width: 4;
+    opacity: 0;
+    filter: blur(8px);
+}
+
+.skill-node-glow.mutated-glow .glow-path-a {
+    animation: mutate-glow-pulse 2s infinite;
+}
+
+.skill-node-glow.mutated-glow .glow-path-b {
+    animation: mutate-glow-pulse 2s infinite;
+}
+
+@keyframes mutate-glow-pulse {
+    0%, 100% { opacity: 0.1; }
+    50% { opacity: 0.4; }
+}
+
+/* SVG border */
+.skill-node {
+    position: relative;
+    width: 150px;
+    height: 76px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+    text-align: center;
+    font-size: 12px;
+    overflow: visible;
+    isolation: isolate;
+    z-index: 1;
+}
+
+.skill-node.main-node {
+    width: 170px;
+    height: 88px;
+}
+
+.skill-node-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: -1;
+    overflow: visible;
+}
+
+/* Card border paths */
+.card-border {
+    fill: none;
+    stroke-width: 1.2;
+    opacity: 0.6;
+}
+
+.path-a, .path-a-inner {
+    stroke-width: 1.2;
+    opacity: 0.6;
+}
+
+.path-b, .path-b-inner {
+    stroke-width: 0.6;
+    opacity: 0.4;
+}
+
+/* Card fill */
+.card-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+
+/* Card content */
+.card-content.skill-node-content {
+    position: relative;
+    z-index: 2;
+    color: var(--node-color, #00ffff);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+}
+
+.skill-node:hover {
+    color: var(--node-color, #00ffff);
+}
+
+.skill-node:hover .card-border {
+    opacity: 0.9;
+    filter: drop-shadow(0 0 8px var(--node-color, #00ffff));
+}
+
+/* 取得済みノード */
+.skill-node.acquired {
+    cursor: default;
+    pointer-events: none;
+}
+
+.skill-node.acquired::after {
+    content: '✓';
+    position: absolute;
+    top: 4px;
+    right: 8px;
+    font-size: 10px;
+    color: inherit;
+    z-index: 3;
+}
+
+/* SP不足で取得不可 */
+.skill-node.disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* メインカードノード（tier 0）*/
+.skill-node.main-node {
+    color: #ffff00;
+}
+
+.skill-node.main-node:hover {
+    color: #ffff00;
+}
+
+.skill-node.main-node.acquired {
+    color: #ffff00;
+}
+
+/* 変異ノード */
+.skill-node.mutated {
+    color: #ff00ff;
+}
+
+.skill-node.mutated:hover {
+    color: #ff00ff;
+}
+
+/* ノード内テキスト */
+.skill-node-name {
+    font-size: 12px;
+    letter-spacing: 1px;
+    font-weight: bold;
+}
+
+.skill-node-desc {
+    font-size: 10px;
+    line-height: 1.3;
+    opacity: 0.8;
+}
+
+.skill-node-badge {
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: #ff00ff;
+    text-shadow: 0 0 6px #ff00ff;
+}
+
+/* ノード間の接続線 */
+.skill-connector {
+    width: 1px;
+    height: 16px;
+    background: linear-gradient(to bottom, #00ffff44, #00ffff22);
+}
+
+/* ステータスパネル（右側） */
+#skill-tree-status {
+    flex: 0 0 200px;
+    padding: 10px;
+}
+
+/* === 新スキルツリーUI === */
+
+#skill-tree-layout {
+    display: flex;
+    width: 92%;
+    max-width: 1100px;
+    height: 560px;
+    gap: 40px;
+    align-items: flex-start;
+    position: relative;
+    z-index: 1;
+}
+
+#skill-tree-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+#skill-tree-sp {
+    font-size: 20px;
+    letter-spacing: 3px;
+    color: #00ffff;
+    text-shadow: 0 0 10px #00ffff;
+    margin-bottom: 16px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+/* スクロールエリア：マウスホイールで縦スクロール */
+#skill-tree-scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+#skill-tree-scroll-area::-webkit-scrollbar {
+    display: none;
+}
+
+/* ノードコンテナ：下から上に並ぶ */
+#skill-tree-nodes {
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    gap: 0;
+    padding: 20px 0 40px 0;
+    min-height: 100%;
+    justify-content: flex-start;
+}
+
+/* 1段分のノード行 */
+.skill-tier-row {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    position: relative;
+}
+
+.skill-node-wrapper {
+    flex-shrink: 0;
+}
+
+/* 行間の接続線コンテナ */
+.skill-connector-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 20px;
+    width: 100%;
+}
+
+.skill-connector {
+    width: 1px;
+    height: 20px;
+    background: linear-gradient(to top, #00ffff66, #00ffff22);
+}
+
+/* ノードボタン本体 */
+.skill-node {
+    width: 150px;
+    min-height: 76px;
+    padding: 12px 10px;
+    background: rgba(0, 255, 255, 0.04);
+    border: 1px solid #00ffff33;
+    clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+    color: #00ffff77;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    transition: all 0.15s ease;
+    position: relative;
+    text-align: center;
+    user-select: none;
+}
+
+.skill-node:hover {
+    background: rgba(0, 255, 255, 0.12);
+    border-color: #00ffff;
+    color: #00ffff;
+    transform: translateY(-2px);
+    box-shadow: 0 0 14px #00ffff44;
+}
+
+/* 取得済みノード */
+.skill-node.acquired {
+    background: rgba(0, 255, 255, 0.10);
+    border-color: #00ffff88;
+    color: #00ffff;
+    box-shadow: 0 0 8px #00ffff33;
+    cursor: default;
+    pointer-events: none;
+}
+
+.skill-node.acquired::after {
+    content: '✓';
+    position: absolute;
+    top: 5px;
+    right: 8px;
+    font-size: 10px;
+    color: #00ffff66;
+}
+
+/* SP不足 */
+.skill-node.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* メインカードノード */
+.skill-node.main-node {
+    width: 170px;
+    min-height: 88px;
+    border-color: #ffff0044;
+    color: #ffff0077;
+}
+
+.skill-node.main-node:hover {
+    border-color: #ffff00;
+    color: #ffff00;
+    box-shadow: 0 0 18px #ffff0066;
+}
+
+.skill-node.main-node.acquired {
+    border-color: #ffff00aa;
+    color: #ffff00;
+    box-shadow: 0 0 12px #ffff0055;
+}
+
+/* 変異ノード */
+.skill-node.mutated {
+    border-color: #ff00ff55;
+    color: #ff00ff88;
+    animation: mutate-pulse 2s ease-in-out infinite;
+}
+
+.skill-node.mutated:hover {
+    border-color: #ff00ff;
+    color: #ff00ff;
+    box-shadow: 0 0 18px #ff00ff77;
+    animation: none;
+}
+
+@keyframes mutate-pulse {
+    0%, 100% { box-shadow: 0 0 4px #ff00ff22; border-color: #ff00ff44; }
+    50%       { box-shadow: 0 0 16px #ff00ff88; border-color: #ff00ffaa; }
+}
+
+.skill-node-name {
+    font-size: 12px;
+    letter-spacing: 1px;
+    font-weight: bold;
+    line-height: 1.2;
+}
+
+.skill-node-desc {
+    font-size: 10px;
+    line-height: 1.3;
+    opacity: 0.85;
+    white-space: pre-line;
+}
+
+.skill-node-badge {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: #ff00ff;
+    text-shadow: 0 0 6px #ff00ff;
+    margin-top: 2px;
 }
 

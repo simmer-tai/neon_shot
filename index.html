@@ -37,40 +37,26 @@
             </div>
         </div>
 
-        <!-- ビルド画面 -->
+        <!-- ビルド画面（スキルツリー） -->
         <div id="build-ui" class="hidden overlay-ui">
             <canvas id="build-grid-canvas"></canvas>
-            <div class="build-layout">
-                <!-- 左：ステータス -->
-                <div class="build-status">
-                    <h3 class="build-section-title">STATUS</h3>
-                    <div id="status-panel">
-                        <!-- JSで動的に更新 -->
+
+            <div id="skill-tree-layout">
+                <!-- 左：スキルツリー（スクロール可能） -->
+                <div id="skill-tree-panel">
+                    <div id="skill-tree-sp">SP: 0</div>
+                    <div id="skill-tree-scroll-area">
+                        <div id="skill-tree-nodes"></div>
                     </div>
                 </div>
 
-                <div class="vertical-divider"></div>
-
-                <!-- 右：スロット＋インベントリ -->
-                <div class="build-main">
-                    <div class="build-slots-area">
-                        <h3 class="build-section-title">BUILD SLOTS</h3>
-                        <div id="slot-container">
-                            <div class="slot" data-index="0"></div>
-                            <div class="slot" data-index="1"></div>
-                            <div class="slot" data-index="2"></div>
-                            <div class="slot" data-index="3"></div>
-                        </div>
-                    </div>
-
-                    <div class="build-divider-h"></div>
-
-                    <div class="build-inventory-area">
-                        <h3 id="inventory-title" class="build-section-title">INVENTORY (0/0)</h3>
-                        <div id="inventory-container"></div>
-                    </div>
+                <!-- 右：ステータス -->
+                <div id="skill-tree-status">
+                    <h3 class="build-section-title">STATUS</h3>
+                    <div id="status-panel"></div>
                 </div>
             </div>
+
             <button id="finish-build-btn">FINISH BUILD</button>
         </div>
     </div>

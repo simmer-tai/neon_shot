@@ -2,7 +2,7 @@ import { Player } from './Player.js';
 import { Bullet } from './Bullet.js';
 import { EnemyDrone } from './EnemyDrone.js';
 import { EnemyShooter } from './EnemyShooter.js';
-import { CardSystem, CARDS, MAIN_CARDS } from './CardSystem.js';
+import { SkillTreeSystem, MAIN_NODES, SUB_NODE_POOL } from './CardSystem.js';
 import { ParticleSystem } from './ParticleSystem.js';
 import { ImpactEffect } from './ImpactEffect.js';
 
@@ -58,10 +58,8 @@ export class Game {
         this.waveInterval = 20000;  // 20秒ごと
         this.vInterval = 30000;     // 30秒ごと
 
-        // カード管理
-        this.inventory = [];
-        this.equippedSlots = [null, null, null, null];
-        this.equippedMainCard = null;
+        // スキルツリーシステム
+        this.skillTree = new SkillTreeSystem();
         this.isBuildMode = false;
         this.isMouseDown = false;
 
@@ -129,7 +127,7 @@ export class Game {
         });
 
         this.finishBuildBtn.addEventListener('click', () => {
-            this.closeBuildUI();
+            this.closeSkillTreeUI();
         });
 
         // ループ開始
@@ -190,7 +188,7 @@ export class Game {
         const y = this.player.y;
         const angle = Math.atan2(ty - y, tx - x);
 
-        if (this.equippedMainCard === null) {
+        if (this.skillTree.equippedMainCard === null) {
             // 通常射撃
             const now = Date.now();
             if (now - this.lastFireTime < this.player.fireRate) return;
@@ -211,7 +209,7 @@ export class Game {
                     damage: 10
                 }));
             }
-        } else if (this.equippedMainCard.id === 'shotgun') {
+        } else if (this.skillTree.equippedMainCard.id === 'shotgun') {
             // ショットガン: 5発扇状
             const now = Date.now();
             if (now - this.lastFireTime < this.player.fireRate * 2) return;
@@ -227,7 +225,7 @@ export class Game {
                     damage: 4
                 }));
             }
-        } else if (this.equippedMainCard.id === 'sniper') {
+        } else if (this.skillTree.equippedMainCard.id === 'sniper') {
             // スナイパー: 貫通弾
             const now = Date.now();
             if (now - this.lastFireTime < this.player.fireRate * 4) return;
@@ -239,7 +237,7 @@ export class Game {
                 reflectCount: this.player.reflectCount,
                 damage: 40
             }));
-        } else if (this.equippedMainCard.id === 'homing') {
+        } else if (this.skillTree.equippedMainCard.id === 'homing') {
             // ホーミング: 追尾弾
             const now = Date.now();
             if (now - this.lastFireTime < this.player.fireRate * 1.5) return;
@@ -353,11 +351,6 @@ export class Game {
 
     // フェーズの切り替え
     switchPhase() {
-        // フラッシュ演出
-        this.flashOverlay.classList.remove('flash-active');
-        void this.flashOverlay.offsetWidth; // reflowを強制して再アニメーション
-        this.flashOverlay.classList.add('flash-active');
-
         if (this.phase === 'BATTLE') {
             this.phase = 'SAFE';
             this.phaseTimeLeft = 15;
@@ -366,8 +359,10 @@ export class Game {
             this.enemies.forEach(e => e.destroy());
             this.enemies = [];
 
-            // カード選択開始
-            this.showCardSelection();
+            // スキルツリーUI開始
+            this.skillTree.addSP(2);
+            this.skillTree.refreshAvailableNodes();
+            this.openSkillTreeUI();
         } else {
             this.phase = 'BATTLE';
             this.phaseTimeLeft = 60;
@@ -376,335 +371,268 @@ export class Game {
         }
     }
 
-    // --- カードシステム関連 ---
+    // --- スキルツリーUI ---
 
-    resetAnimations(wrapper) {
+    openSkillTreeUI() {
+        this.isBuildMode = true;
+        this.buildUI.style.opacity = '0';
+        this.buildUI.classList.remove('hidden');
         requestAnimationFrame(() => {
-            const paths = wrapper.querySelectorAll('.path-a, .path-b, .path-a-inner, .path-b-inner, .card-fill, .card-content, .glow-path-a, .glow-path-b');
-            paths.forEach(p => {
-                p.style.animationName = 'none';
-                requestAnimationFrame(() => {
-                    p.style.animationName = '';
-                });
+            requestAnimationFrame(() => {
+                this.buildUI.style.opacity = '1';
             });
         });
+        this.startBuildGridAnimation();
+        this.renderSkillTree();
     }
 
-    showCardSelection() {
-        // メインカード未選択の場合、メインカード選択フェーズを実行
-        if (this.equippedMainCard === null) {
-            this.showMainCardSelection();
-        } else {
-            // メインカード既選択の場合、サブカード選択のみ
-            this.showSubCardSelection();
+    closeSkillTreeUI() {
+        this.buildUI.style.opacity = '0';
+        this.stopBuildGridAnimation();
+        this.finishBuildBtn.classList.add('clicked');
+        setTimeout(() => {
+            this.buildUI.classList.add('hidden');
+            this.buildUI.style.opacity = '';
+            this.finishBuildBtn.classList.remove('clicked');
+            this.isBuildMode = false;
+            this.player.applyBuild(
+                this.skillTree.getBuildData(),
+                this.skillTree.equippedMainCard
+            );
+        }, 300);
+    }
+
+    renderSkillTree() {
+        const container = document.getElementById('skill-tree-nodes');
+        const spDisplay = document.getElementById('skill-tree-sp');
+        if (!container || !spDisplay) return;
+
+        container.innerHTML = '';
+        spDisplay.textContent = `SP: ${this.skillTree.sp}`;
+
+        // 取得済みノードを tier 別にグループ化
+        const tierMap = new Map();
+        for (const node of this.skillTree.acquiredNodes) {
+            if (!tierMap.has(node.tier)) tierMap.set(node.tier, []);
+            tierMap.get(node.tier).push(node);
         }
-    }
 
-    showMainCardSelection() {
-        this.isBuildMode = true;
-        this.cardCandidatesContainer.innerHTML = '';
+        const tiers = Array.from(tierMap.keys()).sort((a, b) => a - b);
 
-        // h2要素を "CHOOSE YOUR PLAYSTYLE" に変更
-        const h2 = document.querySelector('h2');
-        if (h2) h2.textContent = 'CHOOSE YOUR PLAYSTYLE';
+        // 取得済み tier の行を生成
+        for (let i = 0; i < tiers.length; i++) {
+            const tier = tiers[i];
+            const nodes = tierMap.get(tier);
 
-        const candidates = CardSystem.getMainCardCandidates();
-
-        candidates.forEach((card) => {
-            const wrapper = this.createCardElement(card, { isMain: true, size: 'lg' });
-            const cardEl = wrapper.querySelector('.card');
-            wrapper.addEventListener('click', () => {
-                // すべてのカードのクリックを即座に無効化
-                this.cardCandidatesContainer.querySelectorAll('.card-wrapper').forEach(w => {
-                    w.style.pointerEvents = 'none';
-                });
-
-                // メインカード選択
-                this.equippedMainCard = card;
-
-                // 選ばれたカードを拡大
-                cardEl.classList.add('selected');
-
-                // 他のカードを逆再生で消す
-                candidates.forEach((_, i) => {
-                    const otherWrapper = this.cardCandidatesContainer.children[i];
-                    const otherCardEl = otherWrapper.querySelector('.card');
-                    if (otherCardEl !== cardEl) {
-                        otherWrapper.classList.add('exit');
-                        otherCardEl.classList.add('exit');
-                    }
-                });
-
-                // 400ms後、選ばれたカードも消す
-                setTimeout(() => {
-                    cardEl.classList.add('exit');
-                }, 400);
-
-                // 全て消え終わったらサブカード選択へ
-                setTimeout(() => {
-                    this.cardCandidatesContainer.innerHTML = '';
-                    const h2 = document.querySelector('h2');
-                    if (h2) h2.textContent = 'CHOOSE A CARD';
-                    this.showSubCardSelection();
-                }, 1000);
-            });
-            this.cardCandidatesContainer.appendChild(wrapper);
-            this.resetAnimations(wrapper);
-        });
-
-        this.cardSelectionUI.classList.remove('hidden');
-    }
-
-    showSubCardSelection() {
-        this.isBuildMode = true;
-        this.cardCandidatesContainer.innerHTML = '';
-        const candidates = CardSystem.getRandomCandidates(4);
-
-        candidates.forEach((card, index) => {
-            const wrapper = this.createCardElement(card, { size: 'lg' });
-            const cardEl = wrapper.querySelector('.card');
-            wrapper.addEventListener('click', () => {
-                // すべてのカードのクリックを即座に無効化
-                this.cardCandidatesContainer.querySelectorAll('.card-wrapper').forEach(w => {
-                    w.style.pointerEvents = 'none';
-                });
-
-                // 選択アニメーション開始
-                this.inventory.push(card);
-
-                // 選ばれたカードを拡大
-                cardEl.classList.add('selected');
-
-                // 他のカードを逆再生で消す
-                candidates.forEach((_, i) => {
-                    const otherWrapper = this.cardCandidatesContainer.children[i];
-                    const otherCardEl = otherWrapper.querySelector('.card');
-                    if (otherCardEl !== cardEl) {
-                        otherWrapper.classList.add('exit');
-                        otherCardEl.classList.add('exit');
-                    }
-                });
-
-                // 400ms後、選ばれたカードも消す
-                setTimeout(() => {
-                    cardEl.classList.add('exit');
-                }, 400);
-
-                // 全て消え終わったらビルド画面を開く
-                setTimeout(() => {
-                    this.cardSelectionUI.classList.add('hidden');
-                    this.openBuildUI();
-                }, 1000);
-            });
-            this.cardCandidatesContainer.appendChild(wrapper);
-            this.resetAnimations(wrapper);
-        });
-
-        this.cardSelectionUI.classList.remove('hidden');
-    }
-
-    createCardElement(card, options = {}) {
-        const { isMain = false, size = 'lg' } = options;
-
-        // サイズ設定
-        const SIZE_CONFIG = {
-            lg: {
-                viewBox: '0 0 200 300',
-                pathA: 'M0,0 H184 L200,16 V300',
-                pathB: 'M200,300 H16 L0,284 V0',
-                pathAInner: 'M6,6 H178 L194,22 V294',
-                pathBInner: 'M194,294 H22 L6,278 V6'
-            },
-            md: {
-                viewBox: '0 0 160 210',
-                pathA: 'M1,1 H149 L159,11 V209',
-                pathB: 'M159,209 H11 L1,199 V1',
-                pathAInner: 'M7,7 H143 L153,17 V203',
-                pathBInner: 'M153,203 H17 L7,193 V7'
-            },
-            sm: {
-                viewBox: '0 0 100 140',
-                pathA: 'M1,1 H89 L99,11 V139',
-                pathB: 'M99,139 H11 L1,129 V1',
-                pathAInner: 'M7,7 H83 L93,17 V133',
-                pathBInner: 'M93,133 H17 L7,123 V7'
+            // 接続線（tier 0以外の行の前に挿入）
+            if (i > 0) {
+                const connectorRow = document.createElement('div');
+                connectorRow.className = 'skill-connector-row';
+                const connector = document.createElement('div');
+                connector.className = 'skill-connector';
+                connectorRow.appendChild(connector);
+                container.appendChild(connectorRow);
             }
-        };
 
-        const config = SIZE_CONFIG[size] || SIZE_CONFIG.lg;
-        const { viewBox, pathA, pathB, pathAInner, pathBInner } = config;
+            const row = document.createElement('div');
+            row.className = 'skill-tier-row';
 
-        // ラッパーを作成
-        const wrapper = document.createElement('div');
-        wrapper.className = 'card-wrapper';
-
-        // カード本体
-        const div = document.createElement('div');
-        div.className = `card card--${size}`;
-
-        // アニメーション用の枠線SVG（カード内部用）
-        const svg = `
-            <svg class="card-border" viewBox="${viewBox}" overflow="visible">
-                <path class="path-a" d="${pathA}" />
-                <path class="path-b" d="${pathB}" />
-                <path class="path-a-inner" d="${pathAInner}" />
-                <path class="path-b-inner" d="${pathBInner}" />
-            </svg>
-        `;
-
-        // グロー専用SVGレイヤー（card の外側に配置）
-        const glowLayer = document.createElement('div');
-        glowLayer.className = 'card-glow-layer';
-        glowLayer.innerHTML = `
-            <svg class="card-glow-svg" viewBox="${viewBox}" overflow="visible">
-                <path class="glow-path-a" d="${pathA}" />
-                <path class="glow-path-b" d="${pathB}" />
-            </svg>
-        `;
-
-        const fill = '<div class="card-fill"></div>';
-
-        let displayColor = '#00ffff';
-        if (isMain) {
-            div.classList.add('main-card');
-            displayColor = '#ffff00';
-            div.style.borderColor = displayColor;
-            div.style.boxShadow = `0 0 10px ${displayColor}44`;
-            div.style.color = displayColor;
+            for (const node of nodes) {
+                const el = this._createNodeElement(node, true);
+                row.appendChild(el);
+            }
+            container.appendChild(row);
         }
-        glowLayer.style.color = displayColor;
 
-        div.innerHTML = `
-            ${svg}
-            ${fill}
-            <div class="card-content">
-                <div class="card-name">${card.name}</div>
-                <div class="card-desc">${card.description}</div>
-            </div>
-        `;
+        // 候補ノード行（最上段に表示）
+        const available = this.skillTree.availableNodes;
+        if (available.length > 0) {
+            // 接続線
+            if (tiers.length > 0) {
+                const connectorRow = document.createElement('div');
+                connectorRow.className = 'skill-connector-row';
+                const connector = document.createElement('div');
+                connector.className = 'skill-connector';
+                connectorRow.appendChild(connector);
+                container.appendChild(connectorRow);
+            }
+
+            const row = document.createElement('div');
+            row.className = 'skill-tier-row';
+
+            for (const node of available) {
+                const wrapper = this._createNodeElement(node, false);
+                const skillNode = wrapper.querySelector('.skill-node');
+                if (this.skillTree.sp < 1) skillNode.classList.add('disabled');
+                wrapper.addEventListener('click', () => {
+                    const success = this.skillTree.acquireNode(node.id);
+                    if (success) {
+                        // ノード取得後にステータスを即時反映
+                        this.player.applyBuild(
+                            this.skillTree.getBuildData(),
+                            this.skillTree.equippedMainCard
+                        );
+                        this.renderSkillTree();
+                        // 最上部にスクロール
+                        const scrollArea = document.getElementById('skill-tree-scroll-area');
+                        if (scrollArea) scrollArea.scrollTop = 0;
+                    }
+                });
+                row.appendChild(wrapper);
+            }
+            container.appendChild(row);
+        }
+
+        this.updateStatusPanel();
+    }
+
+    _createNodeElement(node, isAcquired) {
+        const isMain = node.type === 'main';
+        const W = isMain ? 170 : 150;
+        const H = isMain ? 88 : 76;
+        const nodeColor = node.color || '#00ffff';
+
+        // Wrapper
+        const wrapper = document.createElement('div');
+        wrapper.className = 'skill-node-wrapper';
+
+        // Glow Layer
+        const glowLayer = document.createElement('svg');
+        glowLayer.className = 'skill-node-glow';
+        glowLayer.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        glowLayer.setAttribute('preserveAspectRatio', 'none');
+
+        const glowPathA = document.createElement('path');
+        glowPathA.className = 'glow-path-a';
+        glowPathA.setAttribute('d', `M 12,0 L ${W-12},0 Q ${W},0 ${W},12 L ${W},${H-12} Q ${W},${H} ${W-12},${H} L 12,${H} Q 0,${H} 0,${H-12} L 0,12 Q 0,0 12,0`);
+        glowPathA.style.stroke = nodeColor;
+
+        const glowPathB = document.createElement('path');
+        glowPathB.className = 'glow-path-b';
+        glowPathB.setAttribute('d', `M 12,0 L ${W-12},0 Q ${W},0 ${W},12 L ${W},${H-12} Q ${W},${H} ${W-12},${H} L 12,${H} Q 0,${H} 0,${H-12} L 0,12 Q 0,0 12,0`);
+        glowPathB.style.stroke = nodeColor;
+
+        glowLayer.appendChild(glowPathA);
+        glowLayer.appendChild(glowPathB);
+
+        if (node.isMutated) {
+            glowLayer.classList.add('mutated-glow');
+        }
+
+        // Skill Node
+        const el = document.createElement('div');
+        el.className = 'skill-node';
+        if (isMain) el.classList.add('main-node');
+        if (node.isMutated) el.classList.add('mutated');
+        if (isAcquired) el.classList.add('acquired');
+
+        el.style.setProperty('--node-color', nodeColor);
+
+        // SVG Border
+        const svg = document.createElement('svg');
+        svg.className = 'skill-node-svg';
+        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        svg.setAttribute('preserveAspectRatio', 'none');
+
+        const pathA = document.createElement('path');
+        pathA.className = 'path-a card-border';
+        pathA.setAttribute('d', `M 12,0 L ${W-12},0 Q ${W},0 ${W},12 L ${W},${H-12} Q ${W},${H} ${W-12},${H} L 12,${H} Q 0,${H} 0,${H-12} L 0,12 Q 0,0 12,0`);
+        pathA.style.stroke = nodeColor;
+
+        const pathB = document.createElement('path');
+        pathB.className = 'path-b card-border';
+        pathB.setAttribute('d', `M 12,0 L ${W-12},0 Q ${W},0 ${W},12 L ${W},${H-12} Q ${W},${H} ${W-12},${H} L 12,${H} Q 0,${H} 0,${H-12} L 0,12 Q 0,0 12,0`);
+        pathB.style.stroke = nodeColor;
+
+        const pathAInner = document.createElement('path');
+        pathAInner.className = 'path-a-inner card-border';
+        pathAInner.setAttribute('d', `M 13,1 L ${W-13},1 Q ${W-1},1 ${W-1},13 L ${W-1},${H-13} Q ${W-1},${H-1} ${W-13},${H-1} L 13,${H-1} Q 1,${H-1} 1,${H-13} L 1,13 Q 1,1 13,1`);
+        pathAInner.style.stroke = nodeColor;
+
+        const pathBInner = document.createElement('path');
+        pathBInner.className = 'path-b-inner card-border';
+        pathBInner.setAttribute('d', `M 13,1 L ${W-13},1 Q ${W-1},1 ${W-1},13 L ${W-1},${H-13} Q ${W-1},${H-1} ${W-13},${H-1} L 13,${H-1} Q 1,${H-1} 1,${H-13} L 1,13 Q 1,1 13,1`);
+        pathBInner.style.stroke = nodeColor;
+
+        svg.appendChild(pathA);
+        svg.appendChild(pathB);
+        svg.appendChild(pathAInner);
+        svg.appendChild(pathBInner);
+
+        // Card Fill
+        const fillDiv = document.createElement('div');
+        fillDiv.className = 'card-fill';
+        if (isMain) {
+            fillDiv.style.backgroundColor = 'rgba(255, 255, 0, 0.05)';
+        } else if (node.isMutated) {
+            fillDiv.style.backgroundColor = 'rgba(255, 0, 255, 0.05)';
+        } else {
+            fillDiv.style.backgroundColor = 'rgba(0, 255, 255, 0.04)';
+        }
+
+        // Card Content
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'card-content skill-node-content';
+
+        const nameEl = document.createElement('div');
+        nameEl.className = 'skill-node-name';
+        nameEl.textContent = node.name;
+
+        const descEl = document.createElement('div');
+        descEl.className = 'skill-node-desc';
+        descEl.textContent = node.description;
+
+        contentDiv.appendChild(nameEl);
+        contentDiv.appendChild(descEl);
+
+        if (node.isMutated) {
+            const badge = document.createElement('div');
+            badge.className = 'skill-node-badge';
+            badge.textContent = '★';
+            contentDiv.appendChild(badge);
+        }
+
+        el.appendChild(svg);
+        el.appendChild(fillDiv);
+        el.appendChild(contentDiv);
 
         wrapper.appendChild(glowLayer);
-        wrapper.appendChild(div);
+        wrapper.appendChild(el);
+
         return wrapper;
     }
 
-    openBuildUI() {
-        this.buildUI.classList.remove('hidden');
-        this.refreshBuildUI();
-        this.startBuildGridAnimation();
-    }
-
-    refreshBuildUI() {
-        // ── ステータスパネル更新 ──
+    updateStatusPanel() {
         const statusPanel = document.getElementById('status-panel');
-        if (statusPanel) {
-            const damage     = this.equippedMainCard?.id === 'shotgun' ? 4
-                             : this.equippedMainCard?.id === 'sniper'  ? 40
-                             : this.equippedMainCard?.id === 'homing'  ? 8
-                             : 10;
-            const isSniper   = this.equippedMainCard?.id === 'sniper';
-            const isShotgun  = this.equippedMainCard?.id === 'shotgun';
+        if (!statusPanel) return;
 
-            const pierce     = isSniper  ? 5 : 1;
-            const multiShot  = isShotgun ? 1 : Math.round(this.player.multiShotChance * 100);
-            const multiUnit  = isShotgun ? '' : '%';
+        const mc = this.skillTree.equippedMainCard;
+        const damage = mc?.id === 'shotgun' ? 4 : mc?.id === 'sniper' ? 40 : mc?.id === 'homing' ? 8 : 10;
+        const pierce = mc?.id === 'sniper' ? 5 : 1;
+        const multiShot = mc?.id === 'shotgun' ? '5発' : Math.round(this.player.multiShotChance * 100) + '%';
 
-            statusPanel.innerHTML = `
-                <div class="status-item">
-                    <span class="status-label">ダメージ</span>
-                    <span class="status-value">${damage}</span>
-                </div>
-                <div class="status-item">
-                    <span class="status-label">弾速</span>
-                    <span class="status-value">${this.player.bulletSpeed.toFixed(1)}</span>
-                </div>
-                <div class="status-item">
-                    <span class="status-label">発射間隔</span>
-                    <span class="status-value">${this.player.fireRate.toFixed(0)}<span class="status-unit">ms</span></span>
-                </div>
-                <div class="status-item">
-                    <span class="status-label">マルチショット</span>
-                    <span class="status-value">${multiShot}<span class="status-unit">${multiUnit}</span></span>
-                </div>
-                <div class="status-item">
-                    <span class="status-label">貫通</span>
-                    <span class="status-value">${pierce}</span>
-                </div>
-            `;
-        }
-
-        // ── 以下、既存コード ──
-        if (!this.inventoryTitle) this.inventoryTitle = document.getElementById('inventory-title');
-
-        const totalCards = this.inventory.length + this.equippedSlots.filter(s => s).length;
-        this.inventoryTitle.textContent = `INVENTORY (${this.inventory.length}/${totalCards})`;
-
-        // スロット更新
-        this.slotContainer.innerHTML = '';
-        this.equippedSlots.forEach((card, index) => {
-            const slot = document.createElement('div');
-            slot.className = 'slot';
-            if (card) {
-                const wrapper = this.createCardElement(card, { size: 'md' });
-                const cardEl = wrapper.querySelector('.card');
-
-                // オーバーレイ追加
-                const overlay = document.createElement('div');
-                overlay.className = 'card-overlay';
-                overlay.innerHTML = '<span class="overlay-text overlay-unequip">UNEQUIP</span>';
-                cardEl.appendChild(overlay);
-
-                wrapper.addEventListener('click', () => this.unequipCard(index));
-                slot.appendChild(wrapper);
-            }
-            this.slotContainer.appendChild(slot);
-        });
-
-        // インベントリ更新
-        this.inventoryContainer.innerHTML = '';
-        this.inventory.forEach((card, index) => {
-            const wrapper = this.createCardElement(card, { size: 'sm' });
-            const cardEl = wrapper.querySelector('.card');
-
-            // オーバーレイ追加
-            const overlay = document.createElement('div');
-            overlay.className = 'card-overlay';
-            overlay.innerHTML = '<span class="overlay-text overlay-equip">EQUIP</span>';
-            cardEl.appendChild(overlay);
-
-            wrapper.addEventListener('click', () => this.equipCard(index));
-            this.inventoryContainer.appendChild(wrapper);
-        });
-    }
-
-    equipCard(inventoryIndex) {
-        const emptySlotIndex = this.equippedSlots.indexOf(null);
-        if (emptySlotIndex !== -1) {
-            const card = this.inventory.splice(inventoryIndex, 1)[0];
-            this.equippedSlots[emptySlotIndex] = card;
-            this.refreshBuildUI();
-        }
-    }
-
-    unequipCard(slotIndex) {
-        const card = this.equippedSlots[slotIndex];
-        if (card) {
-            this.inventory.push(card);
-            this.equippedSlots[slotIndex] = null;
-            this.refreshBuildUI();
-        }
-    }
-
-    closeBuildUI() {
-        this.finishBuildBtn.classList.add('clicked');
-        this.stopBuildGridAnimation();
-        setTimeout(() => {
-            this.buildUI.classList.add('hidden');
-            this.finishBuildBtn.classList.remove('clicked');
-            this.isBuildMode = false;
-            // ステータス反映
-            this.player.applyBuild(this.equippedSlots);
-        }, 200);
+        statusPanel.innerHTML = `
+            <div class="status-item">
+                <span class="status-label">ダメージ</span>
+                <span class="status-value">${damage}</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">弾速</span>
+                <span class="status-value">${this.player.bulletSpeed.toFixed(1)}</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">発射間隔</span>
+                <span class="status-value">${this.player.fireRate.toFixed(0)}<span class="status-unit">ms</span></span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">マルチショット</span>
+                <span class="status-value">${multiShot}</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">貫通</span>
+                <span class="status-value">${pierce}</span>
+            </div>
+        `;
     }
 
     startBuildGridAnimation() {
@@ -942,6 +870,13 @@ export class Game {
                         e.destroy();
                         this.enemies.splice(i, 1);
                         this.killCount++;
+
+                        // 20%の確率でSP+1
+                        if (Math.random() < 0.2) {
+                            this.skillTree.addSP(1);
+                            // TODO: SPゲット演出（後で実装）
+                        }
+
                         hit = true;
                     } else {
                         // 敵が生き残った場合は通常方向の着弾エフェクト
@@ -1071,14 +1006,10 @@ export class Game {
         this.lastShooterSpawnTime = 0;
         this.isGameOver = false;
 
-        // カード初期化
-        this.inventory = [];
-        this.equippedSlots = [null, null, null, null];
-        this.equippedMainCard = null;
+        // スキルツリーリセット
+        this.skillTree.reset();
         this.isBuildMode = false;
-        this.cardSelectionUI.classList.add('hidden');
         this.buildUI.classList.add('hidden');
-        this.player.applyBuild(this.equippedSlots);
 
         document.body.classList.remove('safe-zone');
         this.gameOverUI.classList.add('hidden');

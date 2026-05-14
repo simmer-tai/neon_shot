@@ -33,10 +33,10 @@ export class Player {
     }
 
     /**
-     * 装備カードに基づいてステータスを再計算する
-     * 式：最終値 = 基礎値 × (1 + 各カードの強化率の合計)
+     * 装備ノードに基づいてステータスを再計算する
+     * 式：最終値 = 基礎値 × (1 + 各ノードの強化率の合計)
      */
-    applyBuild(equippedCards) {
+    applyBuild(equippedCards, mainCard = null) {
         let speedMod = 0;
         let bulletSpeedMod = 0;
         let fireRateMod = 0;
