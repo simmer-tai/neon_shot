@@ -935,54 +935,82 @@ body.safe-zone {
     opacity: 0.9;
 }
 
-/* 着弾エフェクト */
-.impact-effect {
+/* 着弾エフェクト - ラッパー */
+.impact-wrapper {
     position: absolute;
     top: 0;
     left: 0;
     width: 0;
     height: 0;
     pointer-events: none;
-    will-change: transform, opacity;
 }
 
-/* 中央のリングフラッシュ */
-.impact-effect::before {
-    content: '';
+/* 衝撃波リング */
+.impact-shockwave {
     position: absolute;
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     border: 2px solid var(--impact-color);
     transform: translate(-50%, -50%) scale(0);
-    animation: impact-ring 0.3s ease-out forwards;
-    box-shadow: 0 0 6px var(--impact-color), 0 0 12px var(--impact-color);
+    box-shadow:
+        0 0 8px var(--impact-color),
+        0 0 20px var(--impact-color),
+        inset 0 0 8px var(--impact-color);
+    animation: shockwave-expand 0.45s ease-out forwards;
 }
 
-@keyframes impact-ring {
-    0%   { transform: translate(-50%, -50%) scale(0); opacity: 1; }
-    100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+.impact-shockwave:nth-child(2) {
+    animation-delay: 80ms;
+    opacity: 0.5;
 }
 
-/* 放射パーティクル */
-.impact-particle {
+@keyframes shockwave-expand {
+    0%   { transform: translate(-50%, -50%) scale(0);   opacity: 1; }
+    60%  { opacity: 0.8; }
+    100% { transform: translate(-50%, -50%) scale(4.5); opacity: 0; }
+}
+
+/* スパークライン */
+.impact-spark {
     position: absolute;
-    width: 8px;
-    height: 2px;
-    background: var(--impact-color);
-    border-radius: 1px;
     top: 0;
     left: 0;
+    width: 28px;
+    height: 2.5px;
+    background: linear-gradient(to right, var(--impact-color), transparent);
+    border-radius: 2px;
     transform-origin: left center;
-    transform: translate(-1px, -1px) rotate(var(--angle));
-    box-shadow: 0 0 4px var(--impact-color);
-    animation: impact-particle-fly 0.25s ease-out forwards;
+    transform: translate(-2px, -1px) rotate(var(--angle)) scaleX(0);
+    box-shadow: 0 0 6px var(--impact-color), 0 0 14px var(--impact-color);
+    animation: spark-fly 0.35s 30ms ease-out forwards;
 }
 
-@keyframes impact-particle-fly {
-    0%   { transform: translate(-1px, -1px) rotate(var(--angle)) scaleX(0); opacity: 1; }
-    40%  { opacity: 1; }
-    100% { transform: translate(-1px, -1px) rotate(var(--angle)) translateX(18px) scaleX(0.3); opacity: 0; }
+@keyframes spark-fly {
+    0%   { transform: translate(-2px, -1px) rotate(var(--angle)) scaleX(0) translateX(0);   opacity: 1; }
+    30%  { transform: translate(-2px, -1px) rotate(var(--angle)) scaleX(1) translateX(0);   opacity: 1; }
+    100% { transform: translate(-2px, -1px) rotate(var(--angle)) scaleX(0.4) translateX(30px); opacity: 0; }
+}
+
+/* コアフラッシュ */
+.impact-core {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #ffffff;
+    transform: translate(-50%, -50%) scale(0);
+    box-shadow:
+        0 0 10px #ffffff,
+        0 0 24px var(--impact-color),
+        0 0 48px var(--impact-color);
+    animation: core-flash 0.2s ease-out forwards;
+}
+
+@keyframes core-flash {
+    0%   { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+    40%  { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
 }
 
 /* --- EnemyShooter スタイル --- */
