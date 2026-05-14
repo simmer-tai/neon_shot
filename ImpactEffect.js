@@ -37,10 +37,29 @@ export class ImpactEffect {
                 rotationSpeed: Math.random() * 12 + 6
             };
 
-            particle.el.className = 'impact-particle-sq';
-            particle.el.style.width = `${size}px`;
-            particle.el.style.height = `${size}px`;
-            particle.el.style.boxShadow = `0 0 4px #00ffff, 0 0 10px #00ffff, 0 0 20px #00ffff`;
+            // 形状をランダムに選択
+            const shapes = ['sq', 'tri', 'hex', 'bar', 'cross'];
+            const shape = shapes[Math.floor(Math.random() * shapes.length)];
+            particle.el.className = `impact-particle-${shape}`;
+
+            // サイズをインラインで設定（形状による）
+            if (shape === 'sq') {
+                particle.el.style.width = `${size}px`;
+                particle.el.style.height = `${size}px`;
+            } else if (shape === 'bar') {
+                particle.el.style.width = `${size * 2}px`;
+                particle.el.style.height = `${Math.max(2, Math.floor(size / 3))}px`;
+            } else if (shape === 'cross') {
+                particle.el.style.width = `${size}px`;
+                particle.el.style.height = `${size}px`;
+            }
+
+            // 六角形の場合はSVGを埋め込む
+            if (shape === 'hex') {
+                particle.el.innerHTML = `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <polygon points="6,0 11,3 11,9 6,12 1,9 1,3" stroke="#00ffff" stroke-width="1.5" fill="none"/>
+                </svg>`;
+            }
 
             this.element.appendChild(particle.el);
             this.particles.push(particle);
