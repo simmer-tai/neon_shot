@@ -21,7 +21,7 @@ export class ImpactEffect {
         for (let i = 0; i < particleCount; i++) {
             const angle = centerAngle + (Math.random() - 0.5) * 2 * spreadAngle;
             const speed = Math.random() * 80 + 60;
-            const size = Math.floor(Math.random() * 3) + 2;
+            const size = Math.floor(Math.random() * 5) + 5;
             const life = Math.random() * 200 + 300;
 
             const particle = {
