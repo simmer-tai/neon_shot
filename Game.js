@@ -512,99 +512,95 @@ export class Game {
 
     _createNodeElement(node, isAcquired) {
         const isMain = node.type === 'main';
-        const W = isMain ? 170 : 150;
-        const H = isMain ? 88 : 76;
         const nodeColor = node.color || '#00ffff';
 
-        // Wrapper
+        // wrapper
         const wrapper = document.createElement('div');
-        wrapper.className = 'skill-node-wrapper';
+        wrapper.className = 'card-wrapper skill-node-wrapper';
+        if (isAcquired) wrapper.classList.add('instant-appear');
 
-        // Glow Layer
-        const glowLayer = document.createElement('svg');
-        glowLayer.className = 'skill-node-glow';
-        glowLayer.setAttribute('viewBox', `0 0 ${W} ${H}`);
-        glowLayer.setAttribute('preserveAspectRatio', 'none');
+        // glow layer（SVG）
+        const W = isMain ? 170 : 150;
+        const H = isMain ? 88 : 76;
+        const pathD = isMain
+            ? `M 14,0 L ${W-14},0 L ${W},14 L ${W},${H} L ${W-14},${H} L 14,${H} L 0,${H-14} L 0,0 Z`
+            : `M 12,0 L ${W-12},0 L ${W},12 L ${W},${H} L ${W-12},${H} L 12,${H} L 0,${H-12} L 0,0 Z`;
 
-        const glowPathA = document.createElement('path');
-        glowPathA.className = 'glow-path-a';
-        glowPathA.setAttribute('d', `M 12,0 L ${W-12},0 Q ${W},0 ${W},12 L ${W},${H-12} Q ${W},${H} ${W-12},${H} L 12,${H} Q 0,${H} 0,${H-12} L 0,12 Q 0,0 12,0`);
-        glowPathA.style.stroke = nodeColor;
+        const glowSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        glowSvg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        glowSvg.setAttribute('preserveAspectRatio', 'none');
+        glowSvg.style.cssText = `position:absolute;top:0;left:0;width:${W}px;height:${H}px;overflow:visible;pointer-events:none;z-index:0;`;
 
-        const glowPathB = document.createElement('path');
-        glowPathB.className = 'glow-path-b';
-        glowPathB.setAttribute('d', `M 12,0 L ${W-12},0 Q ${W},0 ${W},12 L ${W},${H-12} Q ${W},${H} ${W-12},${H} L 12,${H} Q 0,${H} 0,${H-12} L 0,12 Q 0,0 12,0`);
-        glowPathB.style.stroke = nodeColor;
+        const glowPathA = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        glowPathA.setAttribute('d', pathD);
+        glowPathA.setAttribute('fill', 'none');
+        glowPathA.setAttribute('stroke', nodeColor);
+        glowPathA.setAttribute('stroke-width', '2');
+        glowPathA.style.filter = `drop-shadow(0 0 6px ${nodeColor}) drop-shadow(0 0 14px ${nodeColor})`;
+        glowPathA.style.opacity = '0.7';
 
-        glowLayer.appendChild(glowPathA);
-        glowLayer.appendChild(glowPathB);
+        glowSvg.appendChild(glowPathA);
 
-        if (node.isMutated) {
-            glowLayer.classList.add('mutated-glow');
-        }
+        // card 本体
+        const card = document.createElement('div');
+        card.className = isMain ? 'card card--md main-card' : 'card card--md';
+        card.style.width = `${W}px`;
+        card.style.height = `${H}px`;
+        card.style.padding = '0';
+        card.style.color = nodeColor;
+        card.style.setProperty('--node-color', nodeColor);
 
-        // Skill Node
-        const el = document.createElement('div');
-        el.className = 'skill-node';
-        if (isMain) el.classList.add('main-node');
-        if (node.isMutated) el.classList.add('mutated');
-        if (isAcquired) el.classList.add('acquired');
+        // clip-path をパスDと一致させる
+        const cp = isMain
+            ? `polygon(14px 0%, calc(100% - 14px) 0%, 100% 14px, 100% 100%, calc(100% - 14px) 100%, 14px 100%, 0% calc(100% - 14px), 0% 0%)`
+            : `polygon(12px 0%, calc(100% - 12px) 0%, 100% 12px, 100% 100%, calc(100% - 12px) 100%, 12px 100%, 0% calc(100% - 12px), 0% 0%)`;
+        card.style.clipPath = cp;
 
-        el.style.setProperty('--node-color', nodeColor);
+        // SVG ボーダー（パスが clip-path と完全一致）
+        const borderSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        borderSvg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        borderSvg.setAttribute('preserveAspectRatio', 'none');
+        borderSvg.style.cssText = `position:absolute;top:0;left:0;width:${W}px;height:${H}px;overflow:visible;pointer-events:none;z-index:2;`;
 
-        // SVG Border
-        const svg = document.createElement('svg');
-        svg.className = 'skill-node-svg';
-        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-        svg.setAttribute('preserveAspectRatio', 'none');
+        const totalLen = 9999;
 
-        const pathA = document.createElement('path');
-        pathA.className = 'path-a card-border';
-        pathA.setAttribute('d', `M 12,0 L ${W-12},0 Q ${W},0 ${W},12 L ${W},${H-12} Q ${W},${H} ${W-12},${H} L 12,${H} Q 0,${H} 0,${H-12} L 0,12 Q 0,0 12,0`);
-        pathA.style.stroke = nodeColor;
+        const pathA = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        pathA.setAttribute('d', pathD);
+        pathA.setAttribute('fill', 'none');
+        pathA.setAttribute('stroke', nodeColor);
+        pathA.setAttribute('stroke-width', '2');
+        pathA.style.strokeDasharray = totalLen;
+        pathA.style.strokeDashoffset = totalLen;
+        pathA.style.animation = 'draw-path 0.3s ease-out forwards';
 
-        const pathB = document.createElement('path');
-        pathB.className = 'path-b card-border';
-        pathB.setAttribute('d', `M 12,0 L ${W-12},0 Q ${W},0 ${W},12 L ${W},${H-12} Q ${W},${H} ${W-12},${H} L 12,${H} Q 0,${H} 0,${H-12} L 0,12 Q 0,0 12,0`);
-        pathB.style.stroke = nodeColor;
+        borderSvg.appendChild(pathA);
 
-        const pathAInner = document.createElement('path');
-        pathAInner.className = 'path-a-inner card-border';
-        pathAInner.setAttribute('d', `M 13,1 L ${W-13},1 Q ${W-1},1 ${W-1},13 L ${W-1},${H-13} Q ${W-1},${H-1} ${W-13},${H-1} L 13,${H-1} Q 1,${H-1} 1,${H-13} L 1,13 Q 1,1 13,1`);
-        pathAInner.style.stroke = nodeColor;
-
-        const pathBInner = document.createElement('path');
-        pathBInner.className = 'path-b-inner card-border';
-        pathBInner.setAttribute('d', `M 13,1 L ${W-13},1 Q ${W-1},1 ${W-1},13 L ${W-1},${H-13} Q ${W-1},${H-1} ${W-13},${H-1} L 13,${H-1} Q 1,${H-1} 1,${H-13} L 1,13 Q 1,1 13,1`);
-        pathBInner.style.stroke = nodeColor;
-
-        svg.appendChild(pathA);
-        svg.appendChild(pathB);
-        svg.appendChild(pathAInner);
-        svg.appendChild(pathBInner);
-
-        // Card Fill
+        // card-fill
         const fillDiv = document.createElement('div');
         fillDiv.className = 'card-fill';
         if (isMain) {
-            fillDiv.style.backgroundColor = 'rgba(255, 255, 0, 0.05)';
+            fillDiv.style.backgroundColor = '#ffff00';
         } else if (node.isMutated) {
-            fillDiv.style.backgroundColor = 'rgba(255, 0, 255, 0.05)';
+            fillDiv.style.backgroundColor = '#ff00ff';
         } else {
-            fillDiv.style.backgroundColor = 'rgba(0, 255, 255, 0.04)';
+            fillDiv.style.backgroundColor = nodeColor;
         }
+        fillDiv.style.clipPath = cp;
 
-        // Card Content
+        // card-content
         const contentDiv = document.createElement('div');
         contentDiv.className = 'card-content skill-node-content';
+        contentDiv.style.padding = '10px';
 
         const nameEl = document.createElement('div');
         nameEl.className = 'skill-node-name';
         nameEl.textContent = node.name;
+        nameEl.style.color = nodeColor;
 
         const descEl = document.createElement('div');
         descEl.className = 'skill-node-desc';
         descEl.textContent = node.description;
+        descEl.style.color = nodeColor;
 
         contentDiv.appendChild(nameEl);
         contentDiv.appendChild(descEl);
@@ -616,12 +612,30 @@ export class Game {
             contentDiv.appendChild(badge);
         }
 
-        el.appendChild(svg);
-        el.appendChild(fillDiv);
-        el.appendChild(contentDiv);
+        card.appendChild(borderSvg);
+        card.appendChild(fillDiv);
+        card.appendChild(contentDiv);
 
-        wrapper.appendChild(glowLayer);
-        wrapper.appendChild(el);
+        wrapper.appendChild(glowSvg);
+        wrapper.appendChild(card);
+
+        // 取得済みの場合はアニメーションをスキップして acquired 表示
+        if (isAcquired) {
+            pathA.style.animation = 'none';
+            pathA.style.strokeDashoffset = '0';
+            fillDiv.style.animation = 'none';
+            fillDiv.style.transform = 'scaleY(0)';
+            contentDiv.style.animation = 'none';
+            contentDiv.style.opacity = '1';
+            contentDiv.style.transform = 'translateY(0)';
+            card.style.opacity = '0.6';
+            card.style.filter = 'brightness(0.7)';
+            // 取得済みチェックマーク
+            const check = document.createElement('div');
+            check.textContent = '✓';
+            check.style.cssText = 'position:absolute;top:4px;right:8px;font-size:10px;z-index:3;color:' + nodeColor + ';opacity:0.7;';
+            card.appendChild(check);
+        }
 
         return wrapper;
     }

@@ -1070,14 +1070,20 @@ body.safe-zone {
 /* Wrapper for glow + node */
 .skill-node-wrapper {
     position: relative;
-    display: grid;
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
     cursor: pointer;
     width: fit-content;
     height: fit-content;
-    opacity: 0;
-    animation: node-appear 0.3s ease-out forwards;
+}
+
+.skill-node-wrapper.instant-appear {
+    /* 取得済みノードはアニメーションなし */
+}
+
+.skill-node-wrapper:hover .card {
+    filter: brightness(1.3);
 }
 
 .skill-node-wrapper.disabled {
@@ -1346,7 +1352,7 @@ body.safe-zone {
 /* 1段分のノード行 */
 .skill-tier-row {
     display: flex;
-    gap: 16px;
+    gap: 12px;
     justify-content: center;
     align-items: center;
     width: 100%;
