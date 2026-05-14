@@ -20,9 +20,9 @@ export class ImpactEffect {
 
         for (let i = 0; i < particleCount; i++) {
             const angle = centerAngle + (Math.random() - 0.5) * 2 * spreadAngle;
-            const speed = Math.random() * 80 + 60;
+            const speed = Math.random() * 160 + 120;
             const size = Math.floor(Math.random() * 5) + 5;
-            const life = Math.random() * 200 + 300;
+            const life = Math.random() * 100 + 150;
 
             const particle = {
                 el: document.createElement('div'),
@@ -64,8 +64,8 @@ export class ImpactEffect {
                 p.y += p.vy * deltaTime / 1000;
 
                 // 摩擦
-                p.vx *= 0.96;
-                p.vy *= 0.96;
+                p.vx *= 0.90;
+                p.vy *= 0.90;
 
                 // 回転更新
                 p.rotation += p.rotationSpeed;
