@@ -407,9 +407,31 @@ export class Game {
         const spDisplay = document.getElementById('skill-tree-sp');
         if (!container || !spDisplay) return;
 
-        container.innerHTML = '';
         spDisplay.textContent = `SP: ${this.skillTree.sp}`;
 
+        // フェーズ1: 既存ノードに消滅アニメーションを付与
+        const existingWrappers = Array.from(container.querySelectorAll('.skill-node-wrapper, .skill-connector-row, .skill-tier-row'));
+
+        if (existingWrappers.length === 0) {
+            // 初回は即座に描画
+            this._renderSkillTreeContent(container);
+            return;
+        }
+
+        // すべての子要素に消滅アニメーションを付与
+        Array.from(container.children).forEach(child => {
+            child.style.animation = 'node-disappear 0.18s ease-in forwards';
+            child.style.pointerEvents = 'none';
+        });
+
+        // フェーズ2: アニメーション完了後に再描画
+        setTimeout(() => {
+            container.innerHTML = '';
+            this._renderSkillTreeContent(container);
+        }, 200);
+    }
+
+    _renderSkillTreeContent(container) {
         // 取得済みノードを tier 別にグループ化
         const tierMap = new Map();
         for (const node of this.skillTree.acquiredNodes) {
@@ -439,6 +461,8 @@ export class Game {
 
             for (const node of nodes) {
                 const el = this._createNodeElement(node, true);
+                // 取得済みノードに即時表示クラスを付与
+                el.classList.add('instant-appear');
                 row.appendChild(el);
             }
             container.appendChild(row);
