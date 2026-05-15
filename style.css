@@ -1056,7 +1056,7 @@ body.safe-zone {
     display: flex;
     flex-direction: column-reverse;
     align-items: center;
-    gap: 48px;
+    gap: 0;
     padding: 20px 0 40px 0;
     height: max-content;
     justify-content: flex-start;
@@ -1363,7 +1363,7 @@ body.safe-zone {
     display: flex;
     flex-direction: column-reverse;
     align-items: center;
-    gap: 48px;
+    gap: 0;
     padding: 20px 0 40px 0;
     height: max-content;
     justify-content: flex-start;
@@ -1377,6 +1377,7 @@ body.safe-zone {
     align-items: center;
     width: 100%;
     position: relative;
+    margin-bottom: 48px;
 }
 
 .skill-node-wrapper {
