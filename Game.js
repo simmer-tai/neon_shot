@@ -686,7 +686,7 @@ export class Game {
         if (old) old.remove();
 
         const wrappers = Array.from(container.querySelectorAll(
-            '.skill-node-wrapper[data-tier]:not(.node-rejected)'
+            '.skill-node-wrapper[data-tier].instant-appear'
         ));
         if (wrappers.length < 2) return;
 
@@ -749,20 +749,11 @@ export class Game {
                     pathEl.setAttribute('d', `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`);
                     pathEl.setAttribute('fill', 'none');
 
-                    const fromAcquired = fromEl.classList.contains('instant-appear');
-                    const toAcquired   = toEl.classList.contains('instant-appear');
-
-                    if (fromAcquired && toAcquired) {
-                        pathEl.setAttribute('stroke', '#00ffff99');
-                        pathEl.setAttribute('stroke-width', '1.5');
-                        // パスアニメーションを追加
-                        pathEl.style.strokeDasharray = '200';
-                        pathEl.style.strokeDashoffset = '200';
-                        pathEl.style.animation = 'draw-connector 0.4s ease-out forwards';
-                    } else {
-                        pathEl.setAttribute('stroke', '#00ffff33');
-                        pathEl.setAttribute('stroke-width', '1');
-                    }
+                    pathEl.setAttribute('stroke', '#00ffff99');
+                    pathEl.setAttribute('stroke-width', '1.5');
+                    pathEl.style.strokeDasharray = '200';
+                    pathEl.style.strokeDashoffset = '200';
+                    pathEl.style.animation = 'draw-connector 0.4s ease-out forwards';
 
                     svg.appendChild(pathEl);
                 }
