@@ -455,20 +455,6 @@ export class Game {
             const row = document.createElement('div');
             row.className = 'skill-tier-row';
 
-            // まず rejected ノードを追加（左側・暗い）
-            const rejected = this.rejectedNodes.filter(n => n.tier === tier);
-            for (const node of rejected) {
-                const el = this._createNodeElement(node, false);
-                el.classList.add('instant-appear');
-                el.classList.add('node-rejected');
-                el.dataset.tier = node.tier;
-                el.dataset.nodeId = node.id;
-                el.style.pointerEvents = 'none';
-                el.style.opacity = '0.25';
-                row.appendChild(el);
-            }
-
-            // 次に取得済みノードを追加（右側・明るい）
             for (const node of nodes) {
                 const el = this._createNodeElement(node, true);
                 el.classList.add('instant-appear');
@@ -533,6 +519,28 @@ export class Game {
                 row.appendChild(wrapper);
             }
             container.appendChild(row);
+        }
+
+        // rejected ノードを候補行の下に独立行として表示
+        if (this.rejectedNodes.length > 0) {
+            // tierごとにグループ化して行を作る
+            const rejectedTiers = [...new Set(this.rejectedNodes.map(n => n.tier))];
+            for (const tier of rejectedTiers) {
+                const rrow = document.createElement('div');
+                rrow.className = 'skill-tier-row';
+                const rNodes = this.rejectedNodes.filter(n => n.tier === tier);
+                for (const node of rNodes) {
+                    const el = this._createNodeElement(node, false);
+                    el.classList.add('instant-appear');
+                    el.classList.add('node-rejected');
+                    el.dataset.tier = node.tier;
+                    el.dataset.nodeId = `rejected-${node.id}`;
+                    el.style.pointerEvents = 'none';
+                    el.style.opacity = '0.25';
+                    rrow.appendChild(el);
+                }
+                container.appendChild(rrow);
+            }
         }
 
         this.updateStatusPanel();
@@ -683,13 +691,14 @@ export class Game {
         if (old) old.remove();
 
         const wrappers = Array.from(container.querySelectorAll(
-            '.skill-node-wrapper[data-tier].instant-appear:not(.node-rejected)'
+            '.skill-node-wrapper[data-tier]'
         ));
         if (wrappers.length < 2) return;
 
-        // tier別にグループ化
+        // tier別にグループ化（rejected ノードを除外）
         const tierMap = new Map();
         for (const w of wrappers) {
+            if (w.classList.contains('node-rejected')) continue;
             const tier = parseInt(w.dataset.tier);
             if (!tierMap.has(tier)) tierMap.set(tier, []);
             tierMap.get(tier).push(w);
@@ -746,11 +755,19 @@ export class Game {
                     pathEl.setAttribute('d', `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`);
                     pathEl.setAttribute('fill', 'none');
 
-                    pathEl.setAttribute('stroke', '#00ffff99');
-                    pathEl.setAttribute('stroke-width', '1.5');
-                    pathEl.style.strokeDasharray = '300';
-                    pathEl.style.strokeDashoffset = '300';
-                    pathEl.style.animation = 'draw-connector 0.4s ease-out forwards';
+                    const fromAcquired = fromEl.classList.contains('instant-appear') && !fromEl.classList.contains('node-rejected');
+                    const toAcquired = toEl.classList.contains('instant-appear') && !toEl.classList.contains('node-rejected');
+
+                    if (fromAcquired && toAcquired) {
+                        pathEl.setAttribute('stroke', '#00ffff99');
+                        pathEl.setAttribute('stroke-width', '1.5');
+                        pathEl.style.strokeDasharray = '300';
+                        pathEl.style.strokeDashoffset = '300';
+                        pathEl.style.animation = 'draw-connector 0.4s ease-out forwards';
+                    } else {
+                        pathEl.setAttribute('stroke', '#00ffff33');
+                        pathEl.setAttribute('stroke-width', '1');
+                    }
 
                     svg.appendChild(pathEl);
                 }
