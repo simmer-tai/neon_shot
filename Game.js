@@ -446,16 +446,6 @@ export class Game {
             const tier = tiers[i];
             const nodes = tierMap.get(tier);
 
-            // 接続線（tier 0以外の行の前に挿入）
-            if (i > 0) {
-                const connectorRow = document.createElement('div');
-                connectorRow.className = 'skill-connector-row';
-                const connector = document.createElement('div');
-                connector.className = 'skill-connector';
-                connectorRow.appendChild(connector);
-                container.appendChild(connectorRow);
-            }
-
             const row = document.createElement('div');
             row.className = 'skill-tier-row';
 
@@ -463,6 +453,9 @@ export class Game {
                 const el = this._createNodeElement(node, true);
                 // 取得済みノードに即時表示クラスを付与
                 el.classList.add('instant-appear');
+                // data 属性を付与
+                el.dataset.tier = node.tier;
+                el.dataset.nodeId = node.id;
                 row.appendChild(el);
             }
             container.appendChild(row);
@@ -471,21 +464,14 @@ export class Game {
         // 候補ノード行（最上段に表示）
         const available = this.skillTree.availableNodes;
         if (available.length > 0) {
-            // 接続線
-            if (tiers.length > 0) {
-                const connectorRow = document.createElement('div');
-                connectorRow.className = 'skill-connector-row';
-                const connector = document.createElement('div');
-                connector.className = 'skill-connector';
-                connectorRow.appendChild(connector);
-                container.appendChild(connectorRow);
-            }
-
             const row = document.createElement('div');
             row.className = 'skill-tier-row';
 
             for (const node of available) {
                 const wrapper = this._createNodeElement(node, false);
+                // data 属性を付与
+                wrapper.dataset.tier = node.tier;
+                wrapper.dataset.nodeId = node.id;
                 const skillNode = wrapper.querySelector('.skill-node');
                 if (this.skillTree.sp < 1) skillNode.classList.add('disabled');
                 wrapper.addEventListener('click', () => {
@@ -496,10 +482,17 @@ export class Game {
                             this.skillTree.getBuildData(),
                             this.skillTree.equippedMainCard
                         );
-                        this.renderSkillTree();
-                        // 最上部にスクロール
-                        const scrollArea = document.getElementById('skill-tree-scroll-area');
-                        if (scrollArea) scrollArea.scrollTop = 0;
+                        // 候補ノード（instant-appear を持たないもの）を灰色化してから再描画
+                        const candidateWrappers = Array.from(container.querySelectorAll(
+                            '.skill-node-wrapper:not(.instant-appear)'
+                        ));
+                        candidateWrappers.forEach(w => w.classList.add('node-rejected'));
+
+                        setTimeout(() => {
+                            this.renderSkillTree();
+                            const scrollArea = document.getElementById('skill-tree-scroll-area');
+                            if (scrollArea) scrollArea.scrollTop = 0;
+                        }, 350);
                     }
                 });
                 row.appendChild(wrapper);
@@ -508,6 +501,12 @@ export class Game {
         }
 
         this.updateStatusPanel();
+        // DOM描画完了後にコネクターを描く（レイアウト確定を待つ）
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                this._drawConnectors();
+            });
+        });
     }
 
     _createNodeElement(node, isAcquired) {
@@ -638,6 +637,85 @@ export class Game {
         }
 
         return wrapper;
+    }
+
+    _drawConnectors() {
+        const container = document.getElementById('skill-tree-nodes');
+        if (!container) return;
+
+        // 既存コネクターSVGを削除
+        const old = container.querySelector('.connector-svg');
+        if (old) old.remove();
+
+        const wrappers = Array.from(container.querySelectorAll('.skill-node-wrapper[data-tier]'));
+        if (wrappers.length < 2) return;
+
+        // tier別にグループ化
+        const tierMap = new Map();
+        for (const w of wrappers) {
+            const tier = parseInt(w.dataset.tier);
+            if (!tierMap.has(tier)) tierMap.set(tier, []);
+            tierMap.get(tier).push(w);
+        }
+
+        const tiers = Array.from(tierMap.keys()).sort((a, b) => a - b);
+        if (tiers.length < 2) return;
+
+        // SVGを container に追加
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.classList.add('connector-svg');
+        svg.style.cssText = `
+            position:absolute;
+            top:0;left:0;
+            width:100%;
+            height:100%;
+            pointer-events:none;
+            z-index:0;
+            overflow:visible;
+        `;
+        container.appendChild(svg);
+
+        // container の左上を基準にした座標を取得するヘルパー
+        const containerRect = container.getBoundingClientRect();
+
+        const getCenter = (el) => {
+            const r = el.getBoundingClientRect();
+            return {
+                x: r.left + r.width / 2 - containerRect.left,
+                y: r.top + r.height / 2 - containerRect.top
+            };
+        };
+
+        for (let i = 0; i < tiers.length - 1; i++) {
+            const fromNodes = tierMap.get(tiers[i]);
+            const toNodes   = tierMap.get(tiers[i + 1]);
+
+            for (const fromEl of fromNodes) {
+                for (const toEl of toNodes) {
+                    const p1 = getCenter(fromEl);
+                    const p2 = getCenter(toEl);
+
+                    const cy = (p1.y + p2.y) / 2;
+
+                    const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    pathEl.setAttribute('d', `M ${p1.x} ${p1.y} C ${p1.x} ${cy}, ${p2.x} ${cy}, ${p2.x} ${p2.y}`);
+                    pathEl.setAttribute('fill', 'none');
+
+                    const fromAcquired = fromEl.classList.contains('instant-appear');
+                    const toAcquired   = toEl.classList.contains('instant-appear');
+
+                    if (fromAcquired && toAcquired) {
+                        pathEl.setAttribute('stroke', '#00ffff99');
+                        pathEl.setAttribute('stroke-width', '1.5');
+                    } else {
+                        pathEl.setAttribute('stroke', '#00ffff33');
+                        pathEl.setAttribute('stroke-width', '1');
+                    }
+
+                    svg.appendChild(pathEl);
+                }
+            }
+        }
     }
 
     updateStatusPanel() {
