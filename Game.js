@@ -455,17 +455,7 @@ export class Game {
             const row = document.createElement('div');
             row.className = 'skill-tier-row';
 
-            for (const node of nodes) {
-                const el = this._createNodeElement(node, true);
-                // 取得済みノードに即時表示クラスを付与
-                el.classList.add('instant-appear');
-                // data 属性を付与
-                el.dataset.tier = node.tier;
-                el.dataset.nodeId = node.id;
-                row.appendChild(el);
-            }
-
-            // 同tierの未選択ノードも追加
+            // まず rejected ノードを追加（左側・暗い）
             const rejected = this.rejectedNodes.filter(n => n.tier === tier);
             for (const node of rejected) {
                 const el = this._createNodeElement(node, false);
@@ -473,10 +463,17 @@ export class Game {
                 el.classList.add('node-rejected');
                 el.dataset.tier = node.tier;
                 el.dataset.nodeId = node.id;
-                // クリック不可
                 el.style.pointerEvents = 'none';
-                // opacity を下げて視覚的に区別
                 el.style.opacity = '0.25';
+                row.appendChild(el);
+            }
+
+            // 次に取得済みノードを追加（右側・明るい）
+            for (const node of nodes) {
+                const el = this._createNodeElement(node, true);
+                el.classList.add('instant-appear');
+                el.dataset.tier = node.tier;
+                el.dataset.nodeId = node.id;
                 row.appendChild(el);
             }
 
@@ -686,7 +683,7 @@ export class Game {
         if (old) old.remove();
 
         const wrappers = Array.from(container.querySelectorAll(
-            '.skill-node-wrapper[data-tier].instant-appear'
+            '.skill-node-wrapper[data-tier].instant-appear:not(.node-rejected)'
         ));
         if (wrappers.length < 2) return;
 
@@ -751,8 +748,8 @@ export class Game {
 
                     pathEl.setAttribute('stroke', '#00ffff99');
                     pathEl.setAttribute('stroke-width', '1.5');
-                    pathEl.style.strokeDasharray = '200';
-                    pathEl.style.strokeDashoffset = '200';
+                    pathEl.style.strokeDasharray = '300';
+                    pathEl.style.strokeDashoffset = '300';
                     pathEl.style.animation = 'draw-connector 0.4s ease-out forwards';
 
                     svg.appendChild(pathEl);
