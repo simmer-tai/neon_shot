@@ -1547,3 +1547,9 @@ body.safe-zone {
     opacity: 1 !important;
 }
 
+/* コネクターパス描画アニメーション */
+@keyframes draw-connector {
+    from { stroke-dashoffset: 200; }
+    to   { stroke-dashoffset: 0; }
+}
+

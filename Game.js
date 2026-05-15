@@ -60,6 +60,7 @@ export class Game {
 
         // スキルツリーシステム
         this.skillTree = new SkillTreeSystem();
+        this.rejectedNodes = [];
         this.isBuildMode = false;
         this.isMouseDown = false;
 
@@ -463,6 +464,20 @@ export class Game {
                 el.dataset.nodeId = node.id;
                 row.appendChild(el);
             }
+
+            // 同tierの未選択ノードも追加
+            const rejected = this.rejectedNodes.filter(n => n.tier === tier);
+            for (const node of rejected) {
+                const el = this._createNodeElement(node, false);
+                el.classList.add('instant-appear');
+                el.classList.add('node-rejected');
+                el.dataset.tier = node.tier;
+                el.dataset.nodeId = node.id;
+                // クリック不可
+                el.style.pointerEvents = 'none';
+                row.appendChild(el);
+            }
+
             container.appendChild(row);
         }
 
@@ -485,14 +500,23 @@ export class Game {
                 const skillNode = wrapper.querySelector('.skill-node');
                 if (this.skillTree.sp < 1) skillNode.classList.add('disabled');
                 wrapper.addEventListener('click', () => {
+                    // 候補ノードを acquireNode 前に保存
+                    const allCandidates = [...this.skillTree.availableNodes];
+
                     const success = this.skillTree.acquireNode(node.id);
                     if (success) {
+                        // 未選択ノードを rejectedNodes に追加
+                        const rejectedCandidates = allCandidates.filter(n => n.id !== node.id);
+                        rejectedCandidates.forEach(n => {
+                            this.rejectedNodes.push({...n, tier: node.tier});
+                        });
+
                         // ノード取得後にステータスを即時反映
                         this.player.applyBuild(
                             this.skillTree.getBuildData(),
                             this.skillTree.equippedMainCard
                         );
-                        // 候補ノード（instant-appear を持たないもの）を灰色化してから再描画
+                        // 候補ノード（instant-appear を持たないもの）を灰色化
                         const candidateWrappers = Array.from(container.querySelectorAll(
                             '.skill-node-wrapper:not(.instant-appear)'
                         ));
@@ -725,6 +749,10 @@ export class Game {
                     if (fromAcquired && toAcquired) {
                         pathEl.setAttribute('stroke', '#00ffff99');
                         pathEl.setAttribute('stroke-width', '1.5');
+                        // パスアニメーションを追加
+                        pathEl.style.strokeDasharray = '200';
+                        pathEl.style.strokeDashoffset = '200';
+                        pathEl.style.animation = 'draw-connector 0.4s ease-out forwards';
                     } else {
                         pathEl.setAttribute('stroke', '#00ffff33');
                         pathEl.setAttribute('stroke-width', '1');
@@ -1142,6 +1170,7 @@ export class Game {
 
         // スキルツリーリセット
         this.skillTree.reset();
+        this.rejectedNodes = [];
         this.isBuildMode = false;
         this.buildUI.classList.add('hidden');
 
