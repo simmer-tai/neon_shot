@@ -1058,7 +1058,7 @@ body.safe-zone {
     align-items: center;
     gap: 48px;
     padding: 20px 0 40px 0;
-    min-height: 100%;
+    height: max-content;
     justify-content: flex-start;
 }
 
@@ -1351,6 +1351,7 @@ body.safe-zone {
     overflow-x: hidden;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    min-height: 0;
 }
 
 #skill-tree-scroll-area::-webkit-scrollbar {
@@ -1364,7 +1365,7 @@ body.safe-zone {
     align-items: center;
     gap: 48px;
     padding: 20px 0 40px 0;
-    min-height: 100%;
+    height: max-content;
     justify-content: flex-start;
 }
 
