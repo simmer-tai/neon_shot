@@ -475,6 +475,8 @@ export class Game {
                 el.dataset.nodeId = node.id;
                 // クリック不可
                 el.style.pointerEvents = 'none';
+                // opacity を下げて視覚的に区別
+                el.style.opacity = '0.25';
                 row.appendChild(el);
             }
 
@@ -505,10 +507,12 @@ export class Game {
 
                     const success = this.skillTree.acquireNode(node.id);
                     if (success) {
-                        // 未選択ノードを rejectedNodes に追加
+                        // 取得したノードを取得
+                        const acquiredNode = this.skillTree.acquiredNodes[this.skillTree.acquiredNodes.length - 1];
+                        // 未選択ノードを rejectedNodes に追加（tier は取得ノードの tier に合わせる）
                         const rejectedCandidates = allCandidates.filter(n => n.id !== node.id);
                         rejectedCandidates.forEach(n => {
-                            this.rejectedNodes.push({...n, tier: node.tier});
+                            this.rejectedNodes.push({...n, tier: acquiredNode.tier});
                         });
 
                         // ノード取得後にステータスを即時反映
@@ -681,7 +685,9 @@ export class Game {
         const old = container.querySelector('.connector-svg');
         if (old) old.remove();
 
-        const wrappers = Array.from(container.querySelectorAll('.skill-node-wrapper[data-tier]'));
+        const wrappers = Array.from(container.querySelectorAll(
+            '.skill-node-wrapper[data-tier]:not(.node-rejected)'
+        ));
         if (wrappers.length < 2) return;
 
         // tier別にグループ化
