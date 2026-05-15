@@ -1059,7 +1059,6 @@ body.safe-zone {
     gap: 0;
     padding: 20px 0 40px 0;
     height: auto;
-    min-height: min-content;
     justify-content: flex-start;
     width: 100%;
     box-sizing: border-box;
@@ -1368,8 +1367,10 @@ body.safe-zone {
     align-items: center;
     gap: 0;
     padding: 20px 0 40px 0;
-    height: max-content;
+    height: auto;
     justify-content: flex-start;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* 1段分のノード行 */
@@ -1380,10 +1381,6 @@ body.safe-zone {
     align-items: center;
     width: 100%;
     position: relative;
-    margin-top: 0;
-    margin-bottom: 0;
-    padding-top: 24px;
-    padding-bottom: 24px;
 }
 
 .skill-node-wrapper {

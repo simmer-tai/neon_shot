@@ -446,6 +446,11 @@ export class Game {
             const tier = tiers[i];
             const nodes = tierMap.get(tier);
 
+            // スペーサーを先に追加
+            const spacer = document.createElement('div');
+            spacer.style.cssText = 'width:1px; height:48px; flex-shrink:0;';
+            container.appendChild(spacer);
+
             const row = document.createElement('div');
             row.className = 'skill-tier-row';
 
@@ -461,14 +466,14 @@ export class Game {
             container.appendChild(row);
         }
 
-        // 取得済み行と候補行の間のスペーサー
-        const spacer = document.createElement('div');
-        spacer.style.cssText = 'width: 100%; height: 48px; flex-shrink: 0;';
-        container.appendChild(spacer);
-
         // 候補ノード行（最上段に表示）
         const available = this.skillTree.availableNodes;
         if (available.length > 0) {
+            // スペーサーを候補行の前に追加
+            const spacer2 = document.createElement('div');
+            spacer2.style.cssText = 'width:1px; height:48px; flex-shrink:0;';
+            container.appendChild(spacer2);
+
             const row = document.createElement('div');
             row.className = 'skill-tier-row';
 
