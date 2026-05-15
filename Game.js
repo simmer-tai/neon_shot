@@ -461,6 +461,11 @@ export class Game {
             container.appendChild(row);
         }
 
+        // 取得済み行と候補行の間のスペーサー
+        const spacer = document.createElement('div');
+        spacer.style.cssText = 'width: 100%; height: 48px; flex-shrink: 0;';
+        container.appendChild(spacer);
+
         // 候補ノード行（最上段に表示）
         const available = this.skillTree.availableNodes;
         if (available.length > 0) {
