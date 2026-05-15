@@ -678,11 +678,19 @@ export class Game {
         // container の左上を基準にした座標を取得するヘルパー
         const containerRect = container.getBoundingClientRect();
 
-        const getCenter = (el) => {
+        const getTopCenter = (el) => {
             const r = el.getBoundingClientRect();
             return {
                 x: r.left + r.width / 2 - containerRect.left,
-                y: r.top + r.height / 2 - containerRect.top
+                y: r.top - containerRect.top
+            };
+        };
+
+        const getBottomCenter = (el) => {
+            const r = el.getBoundingClientRect();
+            return {
+                x: r.left + r.width / 2 - containerRect.left,
+                y: r.bottom - containerRect.top
             };
         };
 
@@ -692,13 +700,11 @@ export class Game {
 
             for (const fromEl of fromNodes) {
                 for (const toEl of toNodes) {
-                    const p1 = getCenter(fromEl);
-                    const p2 = getCenter(toEl);
-
-                    const cy = (p1.y + p2.y) / 2;
+                    const p1 = getTopCenter(fromEl);   // fromノードの上辺中心
+                    const p2 = getBottomCenter(toEl);  // toノードの下辺中心
 
                     const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                    pathEl.setAttribute('d', `M ${p1.x} ${p1.y} C ${p1.x} ${cy}, ${p2.x} ${cy}, ${p2.x} ${p2.y}`);
+                    pathEl.setAttribute('d', `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`);
                     pathEl.setAttribute('fill', 'none');
 
                     const fromAcquired = fromEl.classList.contains('instant-appear');
