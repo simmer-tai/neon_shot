@@ -705,8 +705,10 @@ export class Game {
 
             for (const fromEl of fromNodes) {
                 for (const toEl of toNodes) {
-                    const p1 = getTopCenter(fromEl);   // fromノードの上辺中心
-                    const p2 = getBottomCenter(toEl);  // toノードの下辺中心
+                    // column-reverseのため fromEl(低tier)は画面下、toEl(高tier)は画面上に位置する
+                    // 接続: fromElの上辺中心 → toElの下辺中心（どちらも互いに向き合う辺）
+                    const p1 = getTopCenter(fromEl);
+                    const p2 = getBottomCenter(toEl);
 
                     const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                     pathEl.setAttribute('d', `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`);
